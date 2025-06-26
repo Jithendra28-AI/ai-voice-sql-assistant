@@ -108,4 +108,44 @@ if text_query and table_info:
     try:
         result_df = pd.read_sql_query(sql_query, conn)
         if result_df.empty:
-            st.warning("⚠️ Query ran, bu
+            st.warning("⚠️ Query ran, but returned no results.")
+        else:
+            st.success("✅ Query Result:")
+            st.dataframe(result_df)
+
+            # 📥 CSV Export
+            csv = result_df.to_csv(index=False).encode("utf-8")
+            st.download_button("⬇️ Download CSV", csv, "query_result.csv", "text/csv")
+
+            # 📊 Charts
+            numeric_cols = result_df.select_dtypes(include="number").columns
+            if len(numeric_cols) == 0:
+                st.info("ℹ️ No numeric columns found in the result, so no chart was generated.")
+            else:
+                st.subheader("📊 Visualize Your Data")
+                st.write("Numeric columns detected:", list(numeric_cols))
+                chart_col = st.selectbox("Select column to visualize", numeric_cols)
+                chart_type = st.selectbox("Choose chart type", ["Bar Chart", "Line Chart", "Area Chart"])
+
+                if chart_type == "Bar Chart":
+                    st.bar_chart(result_df[chart_col])
+                elif chart_type == "Line Chart":
+                    st.line_chart(result_df[chart_col])
+                elif chart_type == "Area Chart":
+                    st.area_chart(result_df[chart_col])
+
+    except Exception as e:
+        st.error(f"❌ SQL Error: {str(e)}")
+
+# 🔚 Close DB
+conn.close()
+
+# 📝 Footer
+st.markdown("---")
+st.markdown(
+    "<div style='text-align: center; font-size: 0.9em;'>"
+    "© 2025 AI SQL Assistant | Built by <strong>Your Name</strong> | "
+    "<a href='mailto:you@example.com'>Contact</a>"
+    "</div>",
+    unsafe_allow_html=True
+)
