@@ -8,7 +8,7 @@ from openai import OpenAI
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # 🧠 Title
-st.title("🧠 Multi-Table AI SQL Assistant (Text Input Only)")
+st.title(" AI SQL Assistant ")
 
 # 📘 Guide section
 with st.expander("📘 How to use this app"):
@@ -17,9 +17,10 @@ with st.expander("📘 How to use this app"):
 
     1. **Upload CSV files** — Upload one or more `.csv` files.
     2. *(Optional)* Define relationships if the data is relational.
-    3. **Ask questions** — Examples:
-       - `"Which parks were established before 1950?"`
-       - `"Total visitors by state?"`
+    3. **Ask questions** — Use natural language based on the actual column names in your data.
+    
+    ⚠️ **Important**: Your questions must use **exact column names** as they appear in your data.  
+    Example: If your column is `YearEstablished`, don’t ask about `yearestablished` or `year`.
     4. **See output** — You’ll get:
        - Generated SQL
        - Query results
@@ -117,8 +118,8 @@ conn.close()
 st.markdown("---")
 st.markdown(
     "<div style='text-align: center; font-size: 0.9em;'>"
-    "© 2025 AI SQL Assistant | Built by <strong>Your Name</strong> | "
-    "<a href='mailto:you@example.com'>Contact</a>"
+    "© 2025 AI SQL Assistant | Built by <strong>Jithendra Anumala</strong> | "
+    "<a href='mailto:jithendra.anumala@du.edu'>Contact</a>"
     "</div>",
     unsafe_allow_html=True
 )
