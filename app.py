@@ -1,12 +1,10 @@
-
 import streamlit as st
 import openai
 import sqlite3
-import speech_recognition as sr
 
-# OpenAI API key from Streamlit secrets
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
+# Function to run SQL on the database
 def run_sql(query):
     conn = sqlite3.connect("ecommerce.db")
     cur = conn.cursor()
@@ -19,21 +17,13 @@ def run_sql(query):
     except Exception as e:
         return str(e), []
 
-def transcribe_voice():
-    r = sr.Recognizer()
-    with sr.Microphone() as source:
-        st.info("Speak your question now...")
-        audio = r.listen(source)
-    try:
-        return r.recognize_google(audio)
-    except Exception as e:
-        return f"Error: {str(e)}"
-
+# Function to generate SQL from natural language using OpenAI
 def generate_sql(nl_query):
-    prompt = f"""Given the database with tables:
-    customers(id, name, city),
-    products(id, name, price),
-    orders(id, customer_id, product_id, date, quantity)
+    prompt = f"""
+Given the database with tables:
+customers(id, name, city),
+products(id, name, price),
+orders(id, customer_id, product_id, date, quantity)
 
 Translate the following natural language question into SQL:
 Question: {nl_query}
@@ -47,13 +37,12 @@ SQL:"""
     return response.choices[0].text.strip()
 
 # Streamlit UI
-st.title("🗣️ Speak to SQL Assistant")
-st.write("Ask your database anything using your voice.")
+st.title("💬 Ask Your Database (Text-Based)")
+st.write("Type a question in plain English and get the result from your database.")
 
-if st.button("🎙️ Record Voice"):
-    nl_question = transcribe_voice()
-    st.write("You said:", nl_question)
+nl_question = st.text_input("Your question:")
 
+if nl_question:
     sql_query = generate_sql(nl_question)
     st.code(sql_query, language="sql")
 
