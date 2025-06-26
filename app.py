@@ -8,7 +8,7 @@ from openai import OpenAI
 st.markdown("""
 <style>
 [data-testid="stAppViewContainer"] {
-    background-image: url("https://images.unsplash.com/photo-1506765515384-028b60a970df?auto=format&fit=crop&w=1950&q=80");
+    background-image: url("");
     background-size: cover;
     background-attachment: fixed;
     background-position: center;
