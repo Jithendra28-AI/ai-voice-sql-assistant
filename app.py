@@ -128,7 +128,7 @@ st.markdown(
 st.markdown("""
 <style>
 [data-testid="stAppViewContainer"] {
-    background-image: url("https://images.unsplash.com/photo-1506765515384-028b60a970df?auto=format&fit=crop&w=1950&q=80");
+    background-image: url("https://videos.openai.com/vg-assets/assets%2Ftask_01jypvm9x2etptyaz7rtpfzyq8%2F1750966393_img_0.webp?st=2025-06-26T17%3A50%3A16Z&se=2025-07-02T18%3A50%3A16Z&sks=b&skt=2025-06-26T17%3A50%3A16Z&ske=2025-07-02T18%3A50%3A16Z&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skoid=8ebb0df1-a278-4e2e-9c20-f2d373479b3a&skv=2019-02-02&sv=2018-11-09&sr=b&sp=r&spr=https%2Chttp&sig=7H0rGKU192myiDg3RAby7Pj73UvKyu1OpK00YbZQS0o%3D&az=oaivgprodscus ");
     background-size: cover;
     background-attachment: fixed;
     background-position: center;
