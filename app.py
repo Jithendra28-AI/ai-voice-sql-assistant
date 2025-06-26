@@ -29,7 +29,7 @@ section.main > div {
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # 🧠 Title
-st.title("🧠 Multi-Table AI SQL Assistant (Text Input Only)")
+st.title("AI SQL Assistant")
 
 # 📘 Help Guide
 with st.expander("📘 How to use this app"):
