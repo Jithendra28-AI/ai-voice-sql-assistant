@@ -70,10 +70,12 @@ st.title("🧠 AI SQL Assistant with Excel + CSV + Schema Visualizer")
 # 📘 Help Guide
 with st.expander("📘 How to use this app"):
     st.markdown("""
-    1. Upload multiple CSV files.
-    2. (Optional) Define table relationships (e.g., orders.customer_id = customers.id).
-    3. Ask natural-language questions (using exact column names).
-    4. View SQL, table results, download Excel and CSV, see schema diagram, and plot chart.
+    1. Choose your database connection in the sidebar:
+       - Use **SQLite (local)** to upload CSVs
+       - Or connect to **PostgreSQL/MySQL** by entering credentials
+    2. (Optional) Define table relationships (e.g., `orders.customer_id = customers.id`)
+    3. Ask natural-language questions (using exact column names)
+    4. View SQL, table results, download Excel and CSV, see schema diagram, and plot chart
     """)
 
 # 📂 Upload CSVs (only if SQLite is selected)
