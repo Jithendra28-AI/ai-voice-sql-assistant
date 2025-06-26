@@ -73,3 +73,23 @@ if nl_question:
             if len(numeric_cols) > 0:
                 st.subheader("📊 Auto Visualization")
                 st.bar_chart(df.set_index(df.columns[0])[numeric_cols[0]])
+
+import os
+
+def load_parks_csv():
+    conn = sqlite3.connect("ecommerce.db")
+    cur = conn.cursor()
+
+    # Check if "parks" table exists already
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='parks'")
+    exists = cur.fetchone()
+
+    if not exists and os.path.exists("NationalPark_Data.csv"):
+        df = pd.read_csv("NationalPark_Data.csv")
+        df.to_sql("parks", conn, if_exists="replace", index=False)
+        st.success("✅ Loaded NationalPark_Data.csv into database as 'parks' table.")
+    conn.close()
+
+# Load the CSV only once
+load_parks_csv()
+
