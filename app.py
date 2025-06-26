@@ -6,6 +6,40 @@ from openai import OpenAI
 from graphviz import Digraph
 import io
 
+# 📡 Sidebar: Connect to a Live Database
+st.sidebar.title("🔌 Connect to a Live Database")
+
+db_type = st.sidebar.selectbox("Database Type", ["SQLite (local)", "PostgreSQL", "MySQL"])
+
+conn = None  # Define connection object
+
+if db_type != "SQLite (local)":
+    host = st.sidebar.text_input("Host")
+    port = st.sidebar.text_input("Port", value="5432" if db_type == "PostgreSQL" else "3306")
+    user = st.sidebar.text_input("Username")
+    password = st.sidebar.text_input("Password", type="password")
+    database = st.sidebar.text_input("Database Name")
+    connect_button = st.sidebar.button("Connect to Database")
+
+    if connect_button:
+        try:
+            if db_type == "PostgreSQL":
+                import psycopg2
+                conn = psycopg2.connect(
+                    host=host, port=port, user=user, password=password, dbname=database
+                )
+            elif db_type == "MySQL":
+                import mysql.connector
+                conn = mysql.connector.connect(
+                    host=host, port=port, user=user, password=password, database=database
+                )
+            st.sidebar.success(f"✅ Connected to {db_type}")
+        except Exception as e:
+            st.sidebar.error(f"❌ Connection failed: {e}")
+else:
+    conn = sqlite3.connect("multi.db")
+    st.sidebar.success("🗂️ Using local SQLite database from uploaded CSVs.")
+
 # 🌿 Background Styling
 st.markdown("""
 <style>
@@ -42,20 +76,30 @@ with st.expander("📘 How to use this app"):
     4. View SQL, table results, download Excel and CSV, see schema diagram, and plot chart.
     """)
 
-# 📂 Upload CSVs
-uploaded_files = st.file_uploader("📂 Upload CSV files", type="csv", accept_multiple_files=True)
-conn = sqlite3.connect("multi.db")
+# 📂 Upload CSVs (only if SQLite is selected)
 table_info = {}
-
-# 📥 Load into SQLite
-if uploaded_files:
-    for file in uploaded_files:
-        table_name = os.path.splitext(file.name)[0].replace(" ", "_").lower()
-        df = pd.read_csv(file)
-        df.to_sql(table_name, conn, if_exists="replace", index=False)
-        table_info[table_name] = df.columns.tolist()
-        st.success(f"✅ Loaded `{file.name}` as `{table_name}`")
-        st.dataframe(df.head())
+if db_type == "SQLite (local)":
+    uploaded_files = st.file_uploader("📂 Upload CSV files", type="csv", accept_multiple_files=True)
+    if uploaded_files:
+        for file in uploaded_files:
+            table_name = os.path.splitext(file.name)[0].replace(" ", "_").lower()
+            df = pd.read_csv(file)
+            df.to_sql(table_name, conn, if_exists="replace", index=False)
+            table_info[table_name] = df.columns.tolist()
+            st.success(f"✅ Loaded `{file.name}` as `{table_name}`")
+            st.dataframe(df.head())
+else:
+    if conn:
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema='public'") if db_type == "PostgreSQL" else cursor.execute("SHOW TABLES")
+            tables = cursor.fetchall()
+            for t in tables:
+                table = t[0] if isinstance(t, tuple) else t
+                df = pd.read_sql_query(f"SELECT * FROM {table} LIMIT 5", conn)
+                table_info[table] = list(df.columns)
+        except Exception as e:
+            st.error(f"Could not load schema: {e}")
 
 # 🔗 Table Relationships
 relationships = st.text_area("🔗 Define table relationships (JOINs, one per line)", placeholder="orders.customer_id = customers.id")
@@ -106,7 +150,7 @@ SQL:
     return sql_code.replace("```sql", "").replace("```", "").strip()
 
 # 🔎 Query execution
-if text_query and table_info:
+if text_query and table_info and conn:
     schema = build_schema_prompt(table_info, relationships)
     sql_query = generate_sql(text_query, schema)
     st.code(sql_query, language="sql")
@@ -147,7 +191,8 @@ if text_query and table_info:
     except Exception as e:
         st.error(f"❌ SQL Error: {str(e)}")
 
-conn.close()
+if conn:
+    conn.close()
 
 # 📝 Footer
 st.markdown("---")
@@ -155,6 +200,5 @@ st.markdown(
     "<div style='text-align:center; font-size: 0.9em;'>"
     "© 2025 AI SQL Assistant | Built by <strong>Your Name</strong> | "
     "<a href='mailto:you@example.com'>Contact</a>"
-    "</div>",
-    unsafe_allow_html=True
+    "</div>", unsafe_allow_html=True
 )
