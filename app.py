@@ -104,7 +104,6 @@ if text_query and table_info:
 
             # 📊 Enhanced Chart Options
 numeric_cols = result_df.select_dtypes(include="number").columns
-
 if len(numeric_cols) > 0:
     st.subheader("📊 Visualize Your Data")
 
