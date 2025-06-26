@@ -169,27 +169,34 @@ if text_query and table_info and conn:
     sql_query = generate_sql(full_prompt, schema)
     st.code(sql_query, language="sql")
 
-    write_ops = ["insert", "update", "delete", "create", "drop", "alter"]
+        write_ops = ["insert", "update", "delete", "create", "drop", "alter"]
     is_write = any(sql_query.lower().strip().startswith(op) for op in write_ops)
 
-   if is_write:
-    st.warning("⚠️ This appears to be a write operation.")
+    if is_write:
+        st.warning("⚠️ This appears to be a write operation.")
 
-    # Extra warning for CREATE/ALTER
-    if sql_query.lower().startswith("create") or sql_query.lower().startswith("alter"):
-        st.info("📐 This will create or modify a table. Please review the SQL carefully.")
+        # Extra warning for CREATE/ALTER
+        if sql_query.lower().startswith("create") or sql_query.lower().startswith("alter"):
+            st.info("📐 This will create or modify a table. Please review the SQL carefully.")
 
-    if st.button("✅ Confirm and Execute Write Query"):
-        try:
-            cursor = conn.cursor()
-            cursor.execute(sql_query)
-            conn.commit()
-            st.success("✅ Write operation executed successfully.")
-        except Exception as e:
-            st.error(f"❌ Error executing write query: {e}")
+        if st.button("✅ Confirm and Execute Write Query"):
+            try:
+                cursor = conn.cursor()
+                cursor.execute(sql_query)
+                conn.commit()
+                st.success("✅ Write operation executed successfully.")
+            except Exception as e:
+                st.error(f"❌ Error executing write query: {e}")
+        else:
+            st.stop()
     else:
-        st.stop()
-
+        try:
+            result_df = pd.read_sql_query(sql_query, conn)
+            if result_df.empty:
+                st.warning("⚠️ Query ran, but no results found.")
+            else:
+                st.success("✅ Query Result:")
+                st.dataframe(result_df)
 
                 # 📥 CSV and Excel Export
                 excel_buffer = io.BytesIO()
