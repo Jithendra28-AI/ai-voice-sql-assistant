@@ -169,7 +169,7 @@ if text_query and table_info and conn:
     sql_query = generate_sql(full_prompt, schema)
     st.code(sql_query, language="sql")
 
-        write_ops = ["insert", "update", "delete", "create", "drop", "alter"]
+    write_ops = ["insert", "update", "delete", "create", "drop", "alter"]
     is_write = any(sql_query.lower().strip().startswith(op) for op in write_ops)
 
     if is_write:
@@ -224,8 +224,6 @@ if text_query and table_info and conn:
         except Exception as e:
             st.error(f"❌ SQL Error: {str(e)}")
 
-if conn:
-    conn.close()
 
 # 📝 Footer
 st.markdown("---")
