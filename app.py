@@ -165,8 +165,7 @@ if text_query and table_info and conn:
 
     full_prompt = text_query
     if user_input_addition:
-        full_prompt += f"
-Details: {user_input_addition}"
+        full_prompt += f" Details: {user_input_addition}
     sql_query = generate_sql(full_prompt, schema)
     st.code(sql_query, language="sql")
 
