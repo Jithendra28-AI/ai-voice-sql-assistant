@@ -1,12 +1,11 @@
 import streamlit as st
-import openai
 import sqlite3
 from openai import OpenAI
 
-# Load API key from Streamlit Secrets
+# ✅ Load OpenAI API key from Streamlit secrets
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# Run SQL query
+# ✅ Function to run SQL on the database
 def run_sql(query):
     conn = sqlite3.connect("ecommerce.db")
     cur = conn.cursor()
@@ -19,7 +18,7 @@ def run_sql(query):
     except Exception as e:
         return str(e), []
 
-# Convert natural language to SQL using OpenAI (v1 syntax)
+# ✅ Function to convert natural language to SQL using OpenAI
 def generate_sql(nl_query):
     prompt = f"""
 Given the database with tables:
@@ -41,21 +40,27 @@ SQL:"""
         max_tokens=150
     )
 
-    return chat_response.choices[0].message.content.strip()
+    # ✅ Clean up markdown formatting from AI output
+    sql_code = chat_response.choices[0].message.content.strip()
+    sql_code = sql_code.replace("```sql", "").replace("```", "").strip()
+    return sql_code
 
-# Streamlit app
-st.title("🧠 Ask Your Database with AI")
-st.write("Type a question and get real-time SQL results.")
+# ✅ Streamlit UI
+st.title("🧠 AI-Powered SQL Assistant")
+st.write("Type a natural language question about your database.")
 
-nl_question = st.text_input("💬 Ask a natural language question:")
+# Input box
+nl_question = st.text_input("💬 Your question:")
 
 if nl_question:
+    # Generate SQL
     sql_query = generate_sql(nl_question)
     st.code(sql_query, language="sql")
 
+    # Run SQL and show results
     result, columns = run_sql(sql_query)
     if isinstance(result, str):
-        st.error(f"SQL Error: {result}")
+        st.error(f"❌ SQL Error: {result}")
     else:
-        st.success("Query Result:")
+        st.success("✅ Query Result:")
         st.dataframe([dict(zip(columns, row)) for row in result])
