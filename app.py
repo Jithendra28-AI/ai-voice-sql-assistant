@@ -21,12 +21,12 @@ def run_sql(query):
 # GPT Text-to-SQL
 def generate_sql(nl_query):
     prompt = f"""
-Given the database with tables:
-customers(id, name, city),
-products(id, name, price),
-orders(id, customer_id, product_id, date, quantity)
+You are a helpful assistant that converts natural language questions into SQL queries.
 
-Translate the following natural language question into an SQL query:
+The database contains a table called parks with these columns:
+(ParkName, State, YearEstablished, Visitors, ParkType)
+
+Translate this question into an SQL query:
 Question: {nl_query}
 SQL:"""
 
