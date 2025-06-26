@@ -2,11 +2,11 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 from openai import OpenAI
+import tempfile
 
-# ✅ Load OpenAI API key from Streamlit secrets
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# ✅ Function to run SQL on the database
+# Run SQL
 def run_sql(query):
     conn = sqlite3.connect("ecommerce.db")
     cur = conn.cursor()
@@ -19,7 +19,7 @@ def run_sql(query):
     except Exception as e:
         return str(e), []
 
-# ✅ Function to convert natural language to SQL using OpenAI v1
+# Convert NL to SQL
 def generate_sql(nl_query):
     prompt = f"""
 Given the database with tables:
@@ -40,29 +40,60 @@ SQL:"""
         temperature=0,
         max_tokens=150
     )
-
-    # ✅ Remove Markdown formatting (```sql ... ```)
     sql_code = chat_response.choices[0].message.content.strip()
     sql_code = sql_code.replace("```sql", "").replace("```", "").strip()
     return sql_code
 
-# ✅ Streamlit UI
-st.title("🧠 AI-Powered SQL Assistant")
-st.write("Type a natural language question and get results from your database!")
+# UI
+st.title("🧠 AI SQL Assistant with Voice + Charts + Export")
 
-# Input box
-nl_question = st.text_input("💬 Ask your question:")
+# Voice recorder
+audio_file = st.audio_recorder("🎙️ Click to record your question", type="audio/wav")
+nl_question = ""
 
+if audio_file:
+    import speech_recognition as sr
+    r = sr.Recognizer()
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+        tmp.write(audio_file.getbuffer())
+        tmp_path = tmp.name
+
+    with sr.AudioFile(tmp_path) as source:
+        audio = r.record(source)
+        try:
+            nl_question = r.recognize_google(audio)
+            st.success(f"You said: {nl_question}")
+        except sr.UnknownValueError:
+            st.error("Could not understand audio.")
+        except sr.RequestError:
+            st.error("Speech Recognition API unavailable.")
+
+# Fallback: text input
+if not nl_question:
+    nl_question = st.text_input("Or type your question here:")
+
+# If question entered
 if nl_question:
-    # Generate SQL
     sql_query = generate_sql(nl_question)
     st.code(sql_query, language="sql")
 
-    # Run SQL
     result, columns = run_sql(sql_query)
     if isinstance(result, str):
-        st.error(f"❌ SQL Error: {result}")
+        st.error(f"SQL Error: {result}")
+    elif not result:
+        st.warning("Query executed, but no results found.")
     else:
         st.success("✅ Query Result:")
         df = pd.DataFrame(result, columns=columns)
         st.dataframe(df)
+
+        # CSV export button
+        csv = df.to_csv(index=False).encode('utf-8')
+        st.download_button("⬇️ Download as CSV", csv, "query_result.csv", "text/csv")
+
+        # Visualization (basic)
+        if df.shape[1] >= 2:
+            numeric_cols = df.select_dtypes(include='number').columns
+            if len(numeric_cols) > 0:
+                st.subheader("📊 Basic Visualization")
+                st.bar_chart(df.set_index(df.columns[0])[numeric_cols[0]])
