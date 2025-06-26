@@ -79,4 +79,11 @@ if text_query and table_info:
             st.download_button("⬇️ Download CSV", csv, "query_result.csv", "text/csv")
 
             # Basic chart
-            numeric_cols = result_df.sele
+            numeric_cols = result_df.select_dtypes(include="number").columns
+            if len(numeric_cols) > 0:
+                st.subheader("📊 Chart")
+                st.bar_chart(result_df[numeric_cols[0]])
+    except Exception as e:
+        st.error(f"SQL Error: {str(e)}")
+
+conn.close()
