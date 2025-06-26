@@ -165,7 +165,8 @@ if text_query and table_info and conn:
 
     full_prompt = text_query
     if user_input_addition:
-        full_prompt += "\nDetails: " + user_input_addition
+        full_prompt += f"
+Details: {user_input_addition}"
     sql_query = generate_sql(full_prompt, schema)
     st.code(sql_query, language="sql")
 
@@ -173,6 +174,22 @@ if text_query and table_info and conn:
     is_write = any(sql_query.lower().strip().startswith(op) for op in write_ops)
 
     if is_write:
+    st.warning("⚠️ This appears to be a write operation.")
+
+    # Extra warning for CREATE/ALTER
+    if sql_query.lower().startswith("create") or sql_query.lower().startswith("alter"):
+        st.info("📐 This will create or modify a table. Please review the SQL carefully.")
+
+    if st.button("✅ Confirm and Execute Write Query"):
+        try:
+            cursor = conn.cursor()
+            cursor.execute(sql_query)
+            conn.commit()
+            st.success("✅ Write operation executed successfully.")
+        except Exception as e:
+            st.error(f"❌ Error executing write query: {e}")
+    else:
+        st.stop()
     st.warning("⚠️ This appears to be a write operation.")
 
     # Extra warning for CREATE/ALTER
