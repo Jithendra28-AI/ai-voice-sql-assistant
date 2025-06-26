@@ -170,7 +170,11 @@ Details: {user_input_addition}"
 if user_input_addition:
     full_prompt += f"
 Details: {user_input_addition}"
-sql_query = generate_sql(full_prompt, schema)
+    full_prompt = text_query
+    if user_input_addition:
+        full_prompt += f"
+Details: {user_input_addition}"
+    sql_query = generate_sql(full_prompt, schema)
     st.code(sql_query, language="sql")
 
     write_ops = ["insert", "update", "delete", "create", "drop", "alter"]
