@@ -79,21 +79,6 @@ if theme_mode == "Dark":
     </style>
     """, unsafe_allow_html=True)
 
-# 🌙 Apply dark theme if selected
-if theme_mode == "Dark":
-    st.markdown("""
-    <style>
-    body {
-        background-color: #0e1117;
-        color: #ffffff;
-    }
-    .stApp {
-        background-color: #0e1117;
-        color: #ffffff;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
 # 🔐 OpenAI client
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
@@ -112,10 +97,6 @@ with st.expander("📘 How to use this app"):
     5. View generated SQL, confirm and run write queries, or explore result data
     6. Export data to Excel or CSV and visualize numeric results with charts
     7. Supported: SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP
-    """)
-    3. Ask natural-language questions (using exact column names)
-    4. Supports SELECT, INSERT, UPDATE, DELETE, CREATE, etc.
-    5. View SQL, results, download Excel/CSV, schema diagram, and chart
     """)
 
 # 📂 Upload CSVs (only if SQLite is selected)
@@ -204,18 +185,16 @@ if text_query and table_info and conn:
 
     full_prompt = text_query
     if user_input_addition:
-        full_prompt += f"
-Details: {user_input_addition}"
+        full_prompt += "\nDetails: " + user_input_addition
     sql_query = generate_sql(full_prompt, schema)
     st.code(sql_query, language="sql")
 
-        write_ops = ["insert", "update", "delete", "create", "drop", "alter"]
+    write_ops = ["insert", "update", "delete", "create", "drop", "alter"]
     is_write = any(sql_query.lower().strip().startswith(op) for op in write_ops)
 
     if is_write:
         st.warning("⚠️ This appears to be a write operation.")
 
-        # Extra warning for CREATE/ALTER
         if sql_query.lower().startswith("create") or sql_query.lower().startswith("alter"):
             st.info("📐 This will create or modify a table. Please review the SQL carefully.")
 
@@ -263,9 +242,6 @@ Details: {user_input_addition}"
                         st.area_chart(result_df[selected_col])
         except Exception as e:
             st.error(f"❌ SQL Error: {str(e)}")
-
-if conn:
-    conn.close()
 
 # 📝 Footer
 st.markdown("---")
