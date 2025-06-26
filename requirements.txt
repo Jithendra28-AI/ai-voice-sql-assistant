@@ -3,3 +3,5 @@ openai>=1.2.0
 pandas
 openpyxl
 graphviz
+psycopg2-binary   # For PostgreSQL
+mysql-connector-python  # For MySQL
