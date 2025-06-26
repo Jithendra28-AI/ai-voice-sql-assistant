@@ -118,19 +118,23 @@ if text_query and table_info:
             csv = result_df.to_csv(index=False).encode("utf-8")
             st.download_button("⬇️ Download CSV", csv, "query_result.csv", "text/csv")
 
-            # 📊 Chart options
-            numeric_cols = result_df.select_dtypes(include="number").columns
-            if len(numeric_cols) > 0:
-                st.subheader("📊 Visualize Your Data")
-                chart_col = st.selectbox("Select column to visualize", numeric_cols)
-                chart_type = st.selectbox("Choose chart type", ["Bar Chart", "Line Chart", "Area Chart"])
+           # 📊 Chart options
+numeric_cols = result_df.select_dtypes(include="number").columns
 
-                if chart_type == "Bar Chart":
-                    st.bar_chart(result_df[chart_col])
-                elif chart_type == "Line Chart":
-                    st.line_chart(result_df[chart_col])
-                elif chart_type == "Area Chart":
-                    st.area_chart(result_df[chart_col])
+if len(numeric_cols) == 0:
+    st.info("ℹ️ No numeric columns found in the result, so no chart was generated.")
+else:
+    st.subheader("📊 Visualize Your Data")
+    st.write("Numeric columns detected:", list(numeric_cols))  # 🧪 Debug line
+    chart_col = st.selectbox("Select column to visualize", numeric_cols)
+    chart_type = st.selectbox("Choose chart type", ["Bar Chart", "Line Chart", "Area Chart"])
+
+    if chart_type == "Bar Chart":
+        st.bar_chart(result_df[chart_col])
+    elif chart_type == "Line Chart":
+        st.line_chart(result_df[chart_col])
+    elif chart_type == "Area Chart":
+        st.area_chart(result_df[chart_col])
     except Exception as e:
         st.error(f"❌ SQL Error: {str(e)}")
 
