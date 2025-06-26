@@ -162,14 +162,7 @@ SQL:
 # 🔎 Query execution
 if text_query and table_info and conn:
     schema = build_schema_prompt(table_info, relationships)
-        full_prompt = text_query
-    if user_input_addition:
-        full_prompt += f"
-Details: {user_input_addition}"
-    full_prompt = text_query
-if user_input_addition:
-    full_prompt += f"
-Details: {user_input_addition}"
+
     full_prompt = text_query
     if user_input_addition:
         full_prompt += f"
