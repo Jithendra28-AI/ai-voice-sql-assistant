@@ -122,3 +122,28 @@ st.markdown(
     "</div>",
     unsafe_allow_html=True
 )
+
+# css 
+# 🌿 Minimal tech-style background image
+st.markdown("""
+<style>
+[data-testid="stAppViewContainer"] {
+    background-image: url("https://images.unsplash.com/photo-1506765515384-028b60a970df?auto=format&fit=crop&w=1950&q=80");
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+[data-testid="stHeader"] {
+    background-color: rgba(255, 255, 255, 0);
+}
+
+section.main > div {
+    background-color: rgba(255, 255, 255, 0.88);
+    padding: 1rem;
+    border-radius: 10px;
+}
+</style>
+""", unsafe_allow_html=True)
+
