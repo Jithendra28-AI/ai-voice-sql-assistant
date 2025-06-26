@@ -1,84 +1,82 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
-import tempfile
-import whisper
+import os
 from openai import OpenAI
 
-# Set your OpenAI API key from Streamlit Secrets
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-model = whisper.load_model("base")
+st.title("🧠 Multi-Table AI SQL Assistant (Text Input Only)")
 
-st.title("🎙️ Voice-to-SQL Assistant (Local Microphone Version)")
+uploaded_files = st.file_uploader("📁 Upload one or more CSV files", type="csv", accept_multiple_files=True)
 
-# Load CSV
-uploaded_file = st.file_uploader("Upload a CSV", type="csv")
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
-    table_name = "data"
-    conn = sqlite3.connect("local_voice.db")
-    df.to_sql(table_name, conn, if_exists="replace", index=False)
-    st.success(f"CSV loaded into SQLite table: `{table_name}`")
-    st.dataframe(df.head())
-else:
-    st.warning("Upload a CSV file to continue.")
-    st.stop()
+# SQLite setup
+db_name = "multi.db"
+conn = sqlite3.connect(db_name)
+table_info = {}
 
-# Voice recorder (Streamlit Nightly/local only)
-audio_data = st.audio_recorder("🎤 Record your question", type="audio/wav")
+# Load uploaded CSVs into SQLite
+if uploaded_files:
+    for file in uploaded_files:
+        table_name = os.path.splitext(file.name)[0].replace(" ", "_").lower()
+        df = pd.read_csv(file)
+        df.to_sql(table_name, conn, if_exists="replace", index=False)
+        table_info[table_name] = df.columns.tolist()
+        st.success(f"✅ Loaded `{file.name}` as `{table_name}`")
+        st.dataframe(df.head())
 
-# Transcribe audio
-voice_text = ""
-if audio_data:
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-        tmp.write(audio_data.getbuffer())
-        tmp_path = tmp.name
-    try:
-        result = model.transcribe(tmp_path)
-        voice_text = result["text"]
-        st.success(f"🧠 Transcribed: {voice_text}")
-    except Exception as e:
-        st.error(f"Whisper failed: {str(e)}")
+# Optional relationships (manual input)
+relationships = st.text_area("🔗 Define table relationships (for JOINs, one per line)", placeholder="parks.id = visitors.park_id")
 
-# Text override or backup
-manual_input = st.text_input("Or type your question here:")
-final_query = manual_input.strip() if manual_input else voice_text
+# Schema builder
+def build_schema_text(table_info, rel_text):
+    schema_lines = [f"{table}({', '.join(cols)})" for table, cols in table_info.items()]
+    rel_lines = rel_text.strip().splitlines() if rel_text else []
+    return "\n".join(["TABLES:"] + schema_lines + ["", "RELATIONSHIPS:"] + rel_lines)
 
-# Generate SQL using GPT
-def generate_sql(query, cols):
+# User question
+text_query = st.text_input("💬 Ask your question about the data:")
+
+# Generate SQL from GPT
+def generate_sql(query, schema_text):
     prompt = f"""
-You are a helpful assistant that generates SQL queries.
+You are an assistant that writes SQL queries.
 
-Table: data({', '.join(cols)})
+{schema_text}
 
-Translate this question to SQL:
+Translate the following natural language question into a valid SQL query:
 Question: {query}
 SQL:
 """
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
+            {"role": "system", "content": "You write SQL queries using JOINs when needed."},
             {"role": "user", "content": prompt}
         ],
         temperature=0,
-        max_tokens=150
+        max_tokens=200
     )
     sql_code = response.choices[0].message.content.strip()
     sql_code = sql_code.replace("```sql", "").replace("```", "").strip()
     return sql_code
 
-# Process input
-if final_query:
-    sql_query = generate_sql(final_query, df.columns.tolist())
+# Query execution
+if text_query and table_info:
+    schema = build_schema_text(table_info, relationships)
+    sql_query = generate_sql(text_query, schema)
     st.code(sql_query, language="sql")
 
     try:
-        result = pd.read_sql_query(sql_query, conn)
-        if result.empty:
-            st.warning("Query ran but returned no data.")
+        result_df = pd.read_sql_query(sql_query, conn)
+        if result_df.empty:
+            st.warning("⚠️ Query ran, but returned no results.")
         else:
-            st.dataframe(result)
-    except Exception as e:
-        st.error(f"SQL Error: {str(e)}")
+            st.success("✅ Query Result:")
+            st.dataframe(result_df)
 
-conn.close()
+            # Export
+            csv = result_df.to_csv(index=False).encode("utf-8")
+            st.download_button("⬇️ Download CSV", csv, "query_result.csv", "text/csv")
+
+            # Basic chart
+            numeric_cols = result_df.sele
