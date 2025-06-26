@@ -5,7 +5,7 @@ import os
 from openai import OpenAI
 
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-st.title(" Multi-Table AI SQL Assistant ")
+st.title(" Jithendr's AI SQL Assistant ")
 
 uploaded_files = st.file_uploader("📁 Upload one or more CSV files", type="csv", accept_multiple_files=True)
 
