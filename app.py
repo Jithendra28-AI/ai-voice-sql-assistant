@@ -5,7 +5,8 @@ import os
 from openai import OpenAI
 from graphviz import Digraph
 import io
-
+# 🎨 Theme Toggle
+theme_mode = st.sidebar.radio("🎨 Theme", ["Light", "Dark"])
 # 📡 Sidebar: Connect to a Live Database
 st.sidebar.title("🔌 Connect to a Live Database")
 
@@ -43,6 +44,21 @@ else:
 # 🌿 Background Styling
 st.markdown("""
 <style>
+# 🌙 Apply dark theme if selected
+if theme_mode == "Dark":
+    st.markdown("""
+    <style>
+    body {
+        background-color: #0e1117;
+        color: #ffffff;
+    }
+    .stApp {
+        background-color: #0e1117;
+        color: #ffffff;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 [data-testid="stAppViewContainer"] {
     background-image: url("");
     background-size: cover;
