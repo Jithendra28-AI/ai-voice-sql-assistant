@@ -44,7 +44,7 @@ else:
 st.markdown("""
 <style>
 [data-testid="stAppViewContainer"] {
-    background-image: url("https://images.unsplash.com/photo-1506765515384-028b60a970df?auto=format&fit=crop&w=1950&q=80");
+    background-image: url("");
     background-size: cover;
     background-attachment: fixed;
     background-position: center;
@@ -122,6 +122,10 @@ if table_info:
 
 # 💬 User Query
 text_query = st.text_input("💬 Ask your question (use exact column names):")
+    
+    user_input_addition = ""
+    if text_query:
+        user_input_addition = st.text_area("✍️ Enter additional data/details for INSERT, UPDATE, etc.", placeholder="e.g., name = 'John', age = 30")
 
 # 🧠 Schema builder
 def build_schema_prompt(info, rels):
@@ -155,7 +159,11 @@ SQL:
 # 🔎 Query execution
 if text_query and table_info and conn:
     schema = build_schema_prompt(table_info, relationships)
-    sql_query = generate_sql(text_query, schema)
+        full_prompt = text_query
+    if user_input_addition:
+        full_prompt += f"
+Details: {user_input_addition}"
+    sql_query = generate_sql(full_prompt, schema)
     st.code(sql_query, language="sql")
 
     write_ops = ["insert", "update", "delete", "create", "drop", "alter"]
