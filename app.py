@@ -1,5 +1,6 @@
 import streamlit as st
 import sqlite3
+import pandas as pd
 from openai import OpenAI
 
 # ✅ Load OpenAI API key from Streamlit secrets
@@ -18,7 +19,7 @@ def run_sql(query):
     except Exception as e:
         return str(e), []
 
-# ✅ Function to convert natural language to SQL using OpenAI
+# ✅ Function to convert natural language to SQL using OpenAI v1
 def generate_sql(nl_query):
     prompt = f"""
 Given the database with tables:
@@ -40,27 +41,28 @@ SQL:"""
         max_tokens=150
     )
 
-    # ✅ Clean up markdown formatting from AI output
+    # ✅ Remove Markdown formatting (```sql ... ```)
     sql_code = chat_response.choices[0].message.content.strip()
     sql_code = sql_code.replace("```sql", "").replace("```", "").strip()
     return sql_code
 
 # ✅ Streamlit UI
 st.title("🧠 AI-Powered SQL Assistant")
-st.write("Type a natural language question about your database.")
+st.write("Type a natural language question and get results from your database!")
 
 # Input box
-nl_question = st.text_input("💬 Your question:")
+nl_question = st.text_input("💬 Ask your question:")
 
 if nl_question:
     # Generate SQL
     sql_query = generate_sql(nl_question)
     st.code(sql_query, language="sql")
 
-    # Run SQL and show results
+    # Run SQL
     result, columns = run_sql(sql_query)
     if isinstance(result, str):
         st.error(f"❌ SQL Error: {result}")
     else:
         st.success("✅ Query Result:")
-        st.dataframe([dict(zip(columns, row)) for row in result])
+        df = pd.DataFrame(result, columns=columns)
+        st.dataframe(df)
