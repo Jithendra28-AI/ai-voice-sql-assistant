@@ -119,12 +119,30 @@ if text_query and table_info:
             st.success("✅ Query Result:")
             st.dataframe(result_df)
 
-            # 📥 Excel Export
-            excel_buffer = io.BytesIO()
-            with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
-                result_df.to_excel(writer, index=False, sheet_name="QueryResult")
-            st.download_button("📤 Download as Excel", excel_buffer.getvalue(), "query_result.xlsx",
-                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+           # 📤 Export Options
+
+# Excel
+excel_buffer = io.BytesIO()
+with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
+    result_df.to_excel(writer, index=False, sheet_name="QueryResult")
+
+# CSV
+csv_data = result_df.to_csv(index=False).encode("utf-8")
+
+st.download_button(
+    label="📥 Download as Excel",
+    data=excel_buffer.getvalue(),
+    file_name="query_result.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
+
+st.download_button(
+    label="📄 Download as CSV",
+    data=csv_data,
+    file_name="query_result.csv",
+    mime="text/csv"
+)
+
 
             # 📊 Chart
             numeric_cols = result_df.select_dtypes(include="number").columns
