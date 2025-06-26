@@ -10,7 +10,7 @@ import io
 st.markdown("""
 <style>
 [data-testid="stAppViewContainer"] {
-    background-image: url("");
+    background-image: url("https://images.unsplash.com/photo-1506765515384-028b60a970df?auto=format&fit=crop&w=1950&q=80");
     background-size: cover;
     background-attachment: fixed;
     background-position: center;
@@ -27,11 +27,11 @@ section.main > div {
 </style>
 """, unsafe_allow_html=True)
 
-# 🔐 OpenAI
+# 🔐 OpenAI client
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # 🧠 App Title
-st.title("🧠 AI SQL Assistant with Excel + Schema Visualizer")
+st.title("🧠 AI SQL Assistant with Excel + CSV + Schema Visualizer")
 
 # 📘 Help Guide
 with st.expander("📘 How to use this app"):
@@ -39,7 +39,7 @@ with st.expander("📘 How to use this app"):
     1. Upload multiple CSV files.
     2. (Optional) Define table relationships (e.g., orders.customer_id = customers.id).
     3. Ask natural-language questions (using exact column names).
-    4. View SQL, table results, download Excel, see schema diagram, and plot chart.
+    4. View SQL, table results, download Excel and CSV, see schema diagram, and plot chart.
     """)
 
 # 📂 Upload CSVs
@@ -76,7 +76,7 @@ if table_info:
 # 💬 User Query
 text_query = st.text_input("💬 Ask your question (use exact column names):")
 
-# 🧠 GPT Schema Prompt
+# 🧠 Schema builder
 def build_schema_prompt(info, rels):
     schema = [f"{t}({', '.join(c)})" for t, c in info.items()]
     rel_lines = rels.strip().splitlines() if rels else []
@@ -105,7 +105,7 @@ SQL:
     sql_code = response.choices[0].message.content.strip()
     return sql_code.replace("```sql", "").replace("```", "").strip()
 
-# 🔎 Execute Query
+# 🔎 Query execution
 if text_query and table_info:
     schema = build_schema_prompt(table_info, relationships)
     sql_query = generate_sql(text_query, schema)
@@ -119,30 +119,16 @@ if text_query and table_info:
             st.success("✅ Query Result:")
             st.dataframe(result_df)
 
-           # 📤 Export Options
+            # 📥 CSV and Excel Export
+            excel_buffer = io.BytesIO()
+            with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
+                result_df.to_excel(writer, index=False, sheet_name="QueryResult")
+            csv_data = result_df.to_csv(index=False).encode("utf-8")
 
-# Excel
-excel_buffer = io.BytesIO()
-with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
-    result_df.to_excel(writer, index=False, sheet_name="QueryResult")
+            st.download_button("📤 Download as Excel", excel_buffer.getvalue(), "query_result.xlsx",
+                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-# CSV
-csv_data = result_df.to_csv(index=False).encode("utf-8")
-
-st.download_button(
-    label="📥 Download as Excel",
-    data=excel_buffer.getvalue(),
-    file_name="query_result.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
-
-st.download_button(
-    label="📄 Download as CSV",
-    data=csv_data,
-    file_name="query_result.csv",
-    mime="text/csv"
-)
-
+            st.download_button("📄 Download as CSV", csv_data, "query_result.csv", "text/csv")
 
             # 📊 Chart
             numeric_cols = result_df.select_dtypes(include="number").columns
@@ -158,7 +144,6 @@ st.download_button(
                     st.line_chart(result_df[selected_col])
                 elif chart_type == "Area Chart":
                     st.area_chart(result_df[selected_col])
-
     except Exception as e:
         st.error(f"❌ SQL Error: {str(e)}")
 
