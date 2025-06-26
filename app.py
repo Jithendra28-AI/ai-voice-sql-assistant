@@ -65,7 +65,7 @@ section.main > div {
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # 🧠 App Title
-st.title("🧠 AI SQL Assistant with Excel + CSV + Schema Visualizer")
+st.title("🧠 AI SQL Assistant with Full Database Control")
 
 # 📘 Help Guide
 with st.expander("📘 How to use this app"):
@@ -75,7 +75,8 @@ with st.expander("📘 How to use this app"):
        - Or connect to **PostgreSQL/MySQL** by entering credentials
     2. (Optional) Define table relationships (e.g., `orders.customer_id = customers.id`)
     3. Ask natural-language questions (using exact column names)
-    4. View SQL, table results, download Excel and CSV, see schema diagram, and plot chart
+    4. Supports SELECT, INSERT, UPDATE, DELETE, CREATE, etc.
+    5. View SQL, results, download Excel/CSV, schema diagram, and chart
     """)
 
 # 📂 Upload CSVs (only if SQLite is selected)
@@ -157,41 +158,53 @@ if text_query and table_info and conn:
     sql_query = generate_sql(text_query, schema)
     st.code(sql_query, language="sql")
 
-    try:
-        result_df = pd.read_sql_query(sql_query, conn)
-        if result_df.empty:
-            st.warning("⚠️ Query ran, but no results found.")
-        else:
-            st.success("✅ Query Result:")
-            st.dataframe(result_df)
+    write_ops = ["insert", "update", "delete", "create", "drop", "alter"]
+    is_write = any(sql_query.lower().strip().startswith(op) for op in write_ops)
 
-            # 📥 CSV and Excel Export
-            excel_buffer = io.BytesIO()
-            with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
-                result_df.to_excel(writer, index=False, sheet_name="QueryResult")
-            csv_data = result_df.to_csv(index=False).encode("utf-8")
-
-            st.download_button("📤 Download as Excel", excel_buffer.getvalue(), "query_result.xlsx",
-                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-            st.download_button("📄 Download as CSV", csv_data, "query_result.csv", "text/csv")
-
-            # 📊 Chart
-            numeric_cols = result_df.select_dtypes(include="number").columns
-            if len(numeric_cols) == 0:
-                st.info("ℹ️ No numeric columns found for charting.")
+    if is_write:
+        st.warning("⚠️ This appears to be a write operation.")
+        if st.button("✅ Confirm and Execute Write Query"):
+            try:
+                cursor = conn.cursor()
+                cursor.execute(sql_query)
+                conn.commit()
+                st.success("✅ Write operation executed successfully.")
+            except Exception as e:
+                st.error(f"❌ Error executing write query: {e}")
+    else:
+        try:
+            result_df = pd.read_sql_query(sql_query, conn)
+            if result_df.empty:
+                st.warning("⚠️ Query ran, but no results found.")
             else:
-                st.subheader("📊 Visualize Data")
-                selected_col = st.selectbox("Select numeric column to visualize", numeric_cols)
-                chart_type = st.selectbox("Chart type", ["Bar Chart", "Line Chart", "Area Chart"])
-                if chart_type == "Bar Chart":
-                    st.bar_chart(result_df[selected_col])
-                elif chart_type == "Line Chart":
-                    st.line_chart(result_df[selected_col])
-                elif chart_type == "Area Chart":
-                    st.area_chart(result_df[selected_col])
-    except Exception as e:
-        st.error(f"❌ SQL Error: {str(e)}")
+                st.success("✅ Query Result:")
+                st.dataframe(result_df)
+
+                # 📥 CSV and Excel Export
+                excel_buffer = io.BytesIO()
+                with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
+                    result_df.to_excel(writer, index=False, sheet_name="QueryResult")
+                csv_data = result_df.to_csv(index=False).encode("utf-8")
+
+                st.download_button("📤 Download as Excel", excel_buffer.getvalue(), "query_result.xlsx",
+                                   mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+                st.download_button("📄 Download as CSV", csv_data, "query_result.csv", "text/csv")
+
+                # 📊 Chart
+                numeric_cols = result_df.select_dtypes(include="number").columns
+                if len(numeric_cols) > 0:
+                    st.subheader("📊 Visualize Data")
+                    selected_col = st.selectbox("Select numeric column to visualize", numeric_cols)
+                    chart_type = st.selectbox("Chart type", ["Bar Chart", "Line Chart", "Area Chart"])
+                    if chart_type == "Bar Chart":
+                        st.bar_chart(result_df[selected_col])
+                    elif chart_type == "Line Chart":
+                        st.line_chart(result_df[selected_col])
+                    elif chart_type == "Area Chart":
+                        st.area_chart(result_df[selected_col])
+        except Exception as e:
+            st.error(f"❌ SQL Error: {str(e)}")
 
 if conn:
     conn.close()
