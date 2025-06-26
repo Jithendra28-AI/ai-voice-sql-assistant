@@ -4,17 +4,38 @@ import pandas as pd
 import os
 from openai import OpenAI
 
+# 🔑 Set up OpenAI client
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-st.title(" Jithendr's AI SQL Assistant ")
 
+# 🧠 Title
+st.title("🧠 Multi-Table AI SQL Assistant (Text Input Only)")
+
+# 📘 Guide section
+with st.expander("📘 How to use this app"):
+    st.markdown("""
+    **Welcome to the AI SQL Assistant!**
+
+    1. **Upload CSV files** — Upload one or more `.csv` files.
+    2. *(Optional)* Define relationships if the data is relational.
+    3. **Ask questions** — Examples:
+       - `"Which parks were established before 1950?"`
+       - `"Total visitors by state?"`
+    4. **See output** — You’ll get:
+       - Generated SQL
+       - Query results
+       - Optional chart
+       - CSV download
+    """)
+
+# 📁 Upload multiple CSV files
 uploaded_files = st.file_uploader("📁 Upload one or more CSV files", type="csv", accept_multiple_files=True)
 
-# SQLite setup
+# 🔗 SQLite setup
 db_name = "multi.db"
 conn = sqlite3.connect(db_name)
 table_info = {}
 
-# Load uploaded CSVs into SQLite
+# 📥 Load uploaded CSVs into SQLite
 if uploaded_files:
     for file in uploaded_files:
         table_name = os.path.splitext(file.name)[0].replace(" ", "_").lower()
@@ -24,19 +45,22 @@ if uploaded_files:
         st.success(f"✅ Loaded `{file.name}` as `{table_name}`")
         st.dataframe(df.head())
 
-# Optional relationships (manual input)
-relationships = st.text_area("🔗 Define table relationships (for JOINs, one per line)", placeholder="parks.id = visitors.park_id")
+# 🔗 Optional: manual JOIN relationships
+relationships = st.text_area(
+    "🔗 Define table relationships (JOINs, one per line)",
+    placeholder="parks.id = visitors.park_id"
+)
 
-# Schema builder
+# 📐 Build schema text for GPT prompt
 def build_schema_text(table_info, rel_text):
     schema_lines = [f"{table}({', '.join(cols)})" for table, cols in table_info.items()]
     rel_lines = rel_text.strip().splitlines() if rel_text else []
     return "\n".join(["TABLES:"] + schema_lines + ["", "RELATIONSHIPS:"] + rel_lines)
 
-# User question
+# 💬 User input
 text_query = st.text_input("💬 Ask your question about the data:")
 
-# Generate SQL from GPT
+# 🔁 Generate SQL from GPT
 def generate_sql(query, schema_text):
     prompt = f"""
 You are an assistant that writes SQL queries.
@@ -60,7 +84,7 @@ SQL:
     sql_code = sql_code.replace("```sql", "").replace("```", "").strip()
     return sql_code
 
-# Query execution
+# 🔍 Process user query
 if text_query and table_info:
     schema = build_schema_text(table_info, relationships)
     sql_query = generate_sql(text_query, schema)
@@ -74,16 +98,27 @@ if text_query and table_info:
             st.success("✅ Query Result:")
             st.dataframe(result_df)
 
-            # Export
+            # 📥 Download CSV
             csv = result_df.to_csv(index=False).encode("utf-8")
             st.download_button("⬇️ Download CSV", csv, "query_result.csv", "text/csv")
 
-            # Basic chart
+            # 📊 Chart if numeric data exists
             numeric_cols = result_df.select_dtypes(include="number").columns
             if len(numeric_cols) > 0:
-                st.subheader("📊 Chart")
+                st.subheader("📊 Auto Chart")
                 st.bar_chart(result_df[numeric_cols[0]])
     except Exception as e:
-        st.error(f"SQL Error: {str(e)}")
+        st.error(f"❌ SQL Error: {str(e)}")
 
+# 🛑 Close DB connection
 conn.close()
+
+# 📎 Footer
+st.markdown("---")
+st.markdown(
+    "<div style='text-align: center; font-size: 0.9em;'>"
+    "© 2025 AI SQL Assistant | Built by <strong>Your Name</strong> | "
+    "<a href='mailto:you@example.com'>Contact</a>"
+    "</div>",
+    unsafe_allow_html=True
+)
