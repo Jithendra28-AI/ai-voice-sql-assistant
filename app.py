@@ -18,7 +18,6 @@ with st.expander("📘 How to use this app"):
     1. **Upload CSV files** — Upload one or more `.csv` files.
     2. *(Optional)* Define relationships if the data is relational.
     3. **Ask questions** — Use natural language based on the actual column names in your data.
-    
     ⚠️ **Important**: Your questions must use **exact column names** as they appear in your data.  
     Example: If your column is `YearEstablished`, don’t ask about `yearestablished` or `year`.
     4. **See output** — You’ll get:
