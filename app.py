@@ -41,7 +41,7 @@ with st.expander("📘 How to use this app"):
     3. **Ask questions** — Use natural language based on the actual column names in your data.
     
     ⚠️ **Important**: Your questions must use **exact column names** as they appear in your data.  
-    Example: If your column is `YearEstablished`, don’t ask about `yearestablished` or `year`.
+    Example: If your column is `YearEstablished`, don’t ask about `yearestablished` or `year` for best results.
 
     4. **See results** — You’ll get SQL code, answer table, optional chart, and download option.
     """)
