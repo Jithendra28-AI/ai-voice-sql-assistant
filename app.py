@@ -228,13 +228,18 @@ Question: {query}
             st.error(f"❌ SQL Error: {e}")
 
             # 📤 Export
-            excel_buf = io.BytesIO()
-            with pd.ExcelWriter(excel_buf, engine="openpyxl") as writer:
-                df_result.to_excel(writer, index=False)
-            csv_buf = df_result.to_csv(index=False).encode("utf-8")
+            # 📤 Export (only if DataFrame is not empty)
+if not df_result.empty:
+    excel_buf = io.BytesIO()
+    with pd.ExcelWriter(excel_buf, engine="openpyxl") as writer:
+        df_result.to_excel(writer, index=False, sheet_name="Results")
+    csv_buf = df_result.to_csv(index=False).encode("utf-8")
 
-            st.download_button("📤 Download Excel", excel_buf.getvalue(), "results.xlsx")
-            st.download_button("📄 Download CSV", csv_buf, "results.csv")
+    st.download_button("📤 Download Excel", excel_buf.getvalue(), "results.xlsx")
+    st.download_button("📄 Download CSV", csv_buf, "results.csv")
+else:
+    st.info("ℹ️ No data to export.")
+
 
             # 📊 Chart
             num_cols = df_result.select_dtypes(include="number").columns
