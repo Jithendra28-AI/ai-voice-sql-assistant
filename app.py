@@ -207,10 +207,7 @@ Question: {query}
     write_ops = ["insert", "update", "delete", "create", "drop", "alter"]
     is_write = any(sql_query.lower().startswith(op) for op in write_ops)
 
-    # Execute or confirm
-write_ops = ["insert", "update", "delete", "create", "drop", "alter"]
-is_write = any(sql_query.lower().startswith(op) for op in write_ops)
-if is_write:
+    if is_write:
         st.warning("⚠️ This appears to be a write operation.")
         if st.button("✅ Execute Write Query"):
             try:
@@ -222,11 +219,13 @@ if is_write:
                 st.error(f"❌ Error: {e}")
         else:
             st.stop()
-else:
+    else:
         try:
             df_result = pd.read_sql_query(sql_query, conn)
             st.success("✅ Query Result:")
             st.dataframe(df_result)
+        except Exception as e:
+            st.error(f"❌ SQL Error: {e}")
 
             # 📤 Export
             excel_buf = io.BytesIO()
