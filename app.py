@@ -248,7 +248,7 @@ Question: {query}
             else:
                 st.info("ℹ️ No data to export.")
 
-try:
+    try:
     num_cols = df_result.select_dtypes(include="number").columns
     if len(num_cols) > 0:
         st.subheader("📊 Visualize")
