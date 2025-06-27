@@ -15,13 +15,29 @@ usage_logs = []
 theme_mode = st.sidebar.radio("🎨 Theme", ["Light", "Dark"])
 
 # 🧑 Track User
-user_id = st.sidebar.text_input("🧑 Enter your name or email to use this app")
-if user_id and "user_logged" not in st.session_state:
-    st.session_state["user_logged"] = True
-    usage_logs.append({
-        "timestamp": datetime.datetime.now().isoformat(),
-        "user": user_id
-    })
+if "user_logged" not in st.session_state:
+    st.session_state.user_id = st.text_input("🧑 Please enter your name or email to continue")
+    if st.session_state.user_id:
+        st.session_state.user_logged = True
+        usage_logs.append({
+            "timestamp": datetime.datetime.now().isoformat(),
+            "user": st.session_state.user_id
+        })
+        def send_email_report(recipient, user_logs):
+            content = "
+".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
+            msg = MIMEText(content)
+            msg["From"] = "jithendra.anumala@du.edu"
+            msg["To"] = recipient
+            msg["Subject"] = "AI SQL App - New User Access"
+
+            with smtplib.SMTP("smtp.gmail.com", 587) as server:
+                server.starttls()
+                server.login("jithendra.anumala@du.edu", st.secrets["EMAIL_APP_PASSWORD"])
+                server.send_message(msg)
+        send_email_report("jithendra.anumala@du.edu", usage_logs)
+    else:
+        st.stop()
 
 # 📡 Sidebar: Connect to a Live Database
 st.sidebar.title("🔌 Connect to a Live Database")
@@ -243,8 +259,12 @@ if text_query and table_info and conn:
                     result_df.to_excel(writer, index=False, sheet_name="QueryResult")
                 csv_data = result_df.to_csv(index=False).encode("utf-8")
 
-                st.download_button("📤 Download as Excel", excel_buffer.getvalue(), "query_result.xlsx",
-                                   mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                download_type = st.selectbox("📁 Download Format", ["Excel", "CSV"])
+if download_type == "Excel":
+    st.download_button("📤 Download Excel", excel_buffer.getvalue(), "query_result.xlsx",
+                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+elif download_type == "CSV":
+    st.download_button("📄 Download CSV", csv_data, "query_result.csv", "text/csv")
 
                 st.download_button("📄 Download as CSV", csv_data, "query_result.csv", "text/csv")
 
@@ -293,7 +313,8 @@ if st.button("📧 Send Usage Log to My Email"):
     st.success("📨 Email sent successfully.")
 
 def send_email_report(recipient, user_logs):
-    content = "\n".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
+    content = "
+".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
     msg = MIMEText(content)
     msg["From"] = "jithendra.anumala@du.edu"
     msg["To"] = recipient
@@ -304,9 +325,7 @@ def send_email_report(recipient, user_logs):
         server.login("jithendra.anumala@du.edu", st.secrets["EMAIL_APP_PASSWORD"])
         server.send_message(msg)
 
-if st.button("📧 Email Me Who Used This App"):
-    send_email_report("jithendra.anumala@du.edu", usage_logs)
-    st.success("✅ Sent user access log to your email.")
+
 
 # 📝 Footer
 st.markdown("---")
