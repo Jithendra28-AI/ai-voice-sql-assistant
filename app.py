@@ -170,7 +170,7 @@ relationships = st.text_area("🔗 Table Relationships (e.g., orders.customer_id
 
 # 🧠 Build schema for GPT
 schema = [f"{t}({', '.join(cols)})" for t, cols in table_info.items()]
-schema_text = "/n".join(["TABLES:"] + schema + ["", "RELATIONSHIPS:"] + relationships.splitlines())
+schema_text = "\n".join(["TABLES:"] + schema + ["", "RELATIONSHIPS:"] + relationships.splitlines())
 
 # 💬 Query input
 query = st.text_input("💬 Ask your question (use column names from your tables):")
@@ -187,8 +187,7 @@ Translate the following natural language question into a valid SQL query:
 Question: {query}
 """
     if extra_data:
-        prompt += f"/n"Additional details: {extra_data}"
-
+    prompt += f"\nAdditional details: {extra_data}"
     response = client.chat.completions.create(
     model="gpt-3.5-turbo",
     messages=[
