@@ -24,7 +24,8 @@ if "user_logged" not in st.session_state:
             "user": st.session_state.user_id
         })
         def send_email_report(recipient, user_logs):
-            content = "\n".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
+            content = "
+".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
             msg = MIMEText(content)
             msg["From"] = "jithendra.anumala@du.edu"
             msg["To"] = recipient
@@ -245,42 +246,40 @@ if text_query and table_info and conn:
             st.stop()
     else:
         try:
-            result_df = pd.read_sql_query(sql_query, conn)
-            if result_df.empty:
-                st.warning("⚠️ Query ran, but no results found.")
-            else:
-                st.success("✅ Query Result:")
-                st.dataframe(result_df)
+    result_df = pd.read_sql_query(sql_query, conn)
+    if result_df.empty:
+        st.warning("⚠️ Query ran, but no results found.")
+    else:
+        st.success("✅ Query Result:")
+        st.dataframe(result_df)
 
-                # 📥 CSV and Excel Export
-                excel_buffer = io.BytesIO()
-                with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
-                    result_df.to_excel(writer, index=False, sheet_name="QueryResult")
-                csv_data = result_df.to_csv(index=False).encode("utf-8")
+        # 📥 CSV and Excel Export
+        excel_buffer = io.BytesIO()
+        with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
+            result_df.to_excel(writer, index=False, sheet_name="QueryResult")
+        csv_data = result_df.to_csv(index=False).encode("utf-8")
 
-                download_type = st.selectbox("📁 Download Format", ["Excel", "CSV"])
-if download_type == "Excel":
-    st.download_button("📤 Download Excel", excel_buffer.getvalue(), "query_result.xlsx",
-                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-elif download_type == "CSV":
-    st.download_button("📄 Download CSV", csv_data, "query_result.csv", "text/csv")
+        download_type = st.selectbox("📁 Download Format", ["Excel", "CSV"])
+        if download_type == "Excel":
+            st.download_button("📤 Download Excel", excel_buffer.getvalue(), "query_result.xlsx",
+                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        elif download_type == "CSV":
+            st.download_button("📄 Download CSV", csv_data, "query_result.csv", "text/csv")
 
-                st.download_button("📄 Download as CSV", csv_data, "query_result.csv", "text/csv")
-
-                # 📊 Chart
-                numeric_cols = result_df.select_dtypes(include="number").columns
-                if len(numeric_cols) > 0:
-                    st.subheader("📊 Visualize Data")
-                    selected_col = st.selectbox("Select numeric column to visualize", numeric_cols)
-                    chart_type = st.selectbox("Chart type", ["Bar Chart", "Line Chart", "Area Chart"])
-                    if chart_type == "Bar Chart":
-                        st.bar_chart(result_df[selected_col])
-                    elif chart_type == "Line Chart":
-                        st.line_chart(result_df[selected_col])
-                    elif chart_type == "Area Chart":
-                        st.area_chart(result_df[selected_col])
-        except Exception as e:
-            st.error(f"❌ SQL Error: {str(e)}")
+        # 📊 Chart
+        numeric_cols = result_df.select_dtypes(include="number").columns
+        if len(numeric_cols) > 0:
+            st.subheader("📊 Visualize Data")
+            selected_col = st.selectbox("Select numeric column to visualize", numeric_cols)
+            chart_type = st.selectbox("Chart type", ["Bar Chart", "Line Chart", "Area Chart"])
+            if chart_type == "Bar Chart":
+                st.bar_chart(result_df[selected_col])
+            elif chart_type == "Line Chart":
+                st.line_chart(result_df[selected_col])
+            elif chart_type == "Area Chart":
+                st.area_chart(result_df[selected_col])
+except Exception as e:
+    st.error(f"❌ SQL Error: {str(e)}")
 
 def generate_log_csv(logs):
     output = StringIO()
@@ -316,7 +315,7 @@ def send_email_report(recipient, user_logs):
 ".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
     msg = MIMEText(content)
     msg["From"] = "jithendra.anumala@du.edu"
-    msg["To"] = recipient
+    msg["To"] = jithendra.anumala@du.edu
     msg["Subject"] = "AI SQL App - User Access Log"
 
     with smtplib.SMTP("smtp.gmail.com", 587) as server:
