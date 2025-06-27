@@ -24,7 +24,8 @@ if "user_logged" not in st.session_state:
             "user": st.session_state.user_id
         })
         def send_email_report(recipient, user_logs):
-    content = "\n".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
+    content = "
+".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
     msg = MIMEText(content)
     msg["From"] = "jithendra.anumala@du.edu"
     msg["To"] = "jithendra.anumala@du.edu"
@@ -308,7 +309,8 @@ def send_email_report(recipient, csv_data):
 
 
 def send_email_report(recipient, user_logs):
-     content = "\n".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
+    content = "
+".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
     msg = MIMEText(content)
     msg["From"] = "jithendra.anumala@du.edu"
     msg["To"] = recipient
