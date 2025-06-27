@@ -218,7 +218,7 @@ if is_write:
                 st.error(f"❌ Error: {e}")
         else:
             st.stop()
-    else:
+else:
         try:
             df_result = pd.read_sql_query(sql_query, conn)
             st.success("✅ Query Result:")
