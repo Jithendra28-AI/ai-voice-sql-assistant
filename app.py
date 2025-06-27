@@ -5,45 +5,16 @@ import os
 from openai import OpenAI
 from graphviz import Digraph
 import io
-import datetime
-import smtplib
-from email.mime.text import MIMEText
-
-usage_logs = []
 
 # 🎨 Theme Toggle
 theme_mode = st.sidebar.radio("🎨 Theme", ["Light", "Dark"])
 
-# 🧑 Track User
-if "user_logged" not in st.session_state:
-    st.session_state.user_id = st.text_input("🧑 Please enter your name or email to continue")
-    if st.session_state.user_id:
-        st.session_state.user_logged = True
-        usage_logs.append({
-            "timestamp": datetime.datetime.now().isoformat(),
-            "user": st.session_state.user_id
-        })
-
-        def send_email_report(recipient, user_logs):
-            content = "\n".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
-            msg = MIMEText(content)
-            msg["From"] = "jithendra.anumala@du.edu"
-            msg["To"] = recipient
-            msg["Subject"] = "AI SQL App - User Access Log"
-
-            with smtplib.SMTP("smtp.gmail.com", 587) as server:
-                server.starttls()
-                server.login("jithendra.anumala@du.edu", st.secrets["EMAIL_APP_PASSWORD"])
-                server.send_message(msg)
-
-        send_email_report("jithendra.anumala@du.edu", usage_logs)
-    else:
-        st.stop()
-
 # 📡 Sidebar: Connect to a Live Database
 st.sidebar.title("🔌 Connect to a Live Database")
+
 db_type = st.sidebar.selectbox("Database Type", ["SQLite (local)", "PostgreSQL", "MySQL"])
-conn = None
+
+conn = None  # Define connection object
 
 if db_type != "SQLite (local)":
     host = st.sidebar.text_input("Host")
@@ -72,13 +43,63 @@ else:
     conn = sqlite3.connect("multi.db")
     st.sidebar.success("🗂️ Using local SQLite database from uploaded CSVs.")
 
-# ✅ Minimal title
-st.title("🧠 AI SQL Assistant")
+# 🌿 Background Styling
+st.markdown("""
+<style>
+[data-testid="stAppViewContainer"] {
+    background-image: url("");
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+[data-testid="stHeader"] {
+    background-color: rgba(255, 255, 255, 0);
+}
+section.main > div {
+    background-color: rgba(255, 255, 255, 0.88);
+    padding: 1rem;
+    border-radius: 10px;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# 🌙 Apply dark theme if selected
+if theme_mode == "Dark":
+    st.markdown("""
+    <style>
+    body {
+        background-color: #0e1117;
+        color: #ffffff;
+    }
+    .stApp {
+        background-color: #0e1117;
+        color: #ffffff;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 # 🔐 OpenAI client
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# 📂 Upload CSVs (SQLite only)
+# 🧠 App Title
+st.title("🧠 AI SQL Assistant with Full Database Control")
+
+# 📘 Help Guide
+with st.expander("📘 How to use this app"):
+    st.markdown("""
+    1. Choose your database connection in the sidebar:
+       - Use **SQLite (local)** to upload and query CSVs
+       - Or connect to **PostgreSQL/MySQL** by entering credentials
+    2. (Optional) Define table relationships (e.g., `orders.customer_id = customers.id`)
+    3. Ask natural-language questions (e.g., "Show all users from Denver")
+    4. Add details below for INSERT/UPDATE/CREATE operations (e.g., `name = 'John'`)
+    5. View generated SQL, confirm and run write queries, or explore result data
+    6. Export data to Excel or CSV and visualize numeric results with charts
+    7. Supported: SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP
+    """)
+
+# 📂 Upload CSVs (only if SQLite is selected)
 table_info = {}
 if db_type == "SQLite (local)":
     uploaded_files = st.file_uploader("📂 Upload CSV files", type="csv", accept_multiple_files=True)
@@ -94,7 +115,7 @@ else:
     if conn:
         try:
             cursor = conn.cursor()
-            cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema='public'")
+            cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema='public'") if db_type == "PostgreSQL" else cursor.execute("SHOW TABLES")
             tables = cursor.fetchall()
             for t in tables:
                 table = t[0] if isinstance(t, tuple) else t
@@ -103,18 +124,49 @@ else:
         except Exception as e:
             st.error(f"Could not load schema: {e}")
 
-# 🔗 Relationships
-relationships = st.text_area("🔗 Define table relationships (JOINs)", placeholder="orders.customer_id = customers.id")
+# 🔗 Table Relationships
+relationships = st.text_area("🔗 Define table relationships (JOINs, one per line)", placeholder="orders.customer_id = customers.id")
 
-# 🧠 Schema Builder
+# 🧱 Schema Visualizer
+if table_info:
+    st.subheader("🧩 Table Schema Visualizer")
+    dot = Digraph()
+    for table, cols in table_info.items():
+        dot.node(table, f"{table}\n" + "\n".join(cols))
+    for rel in relationships.strip().splitlines():
+        if "=" in rel:
+            left, right = [x.strip() for x in rel.split("=")]
+            lt, rt = left.split(".")[0], right.split(".")[0]
+            dot.edge(lt, rt, label=rel)
+    st.graphviz_chart(dot)
+
+# 💬 User Query
+text_query = st.text_input("💬 Ask your question (use exact column names):")
+
+user_input_addition = ""
+if text_query:
+    user_input_addition = st.text_area(
+        "✍️ Enter additional data/details for INSERT, UPDATE, etc.",
+        placeholder="e.g., name = 'John', age = 30"
+    )
+
+# 🧠 Schema builder
 def build_schema_prompt(info, rels):
     schema = [f"{t}({', '.join(c)})" for t, c in info.items()]
     rel_lines = rels.strip().splitlines() if rels else []
     return "\n".join(["TABLES:"] + schema + ["", "RELATIONSHIPS:"] + rel_lines)
 
-# 🤖 SQL Generator
+# 🤖 GPT SQL Generator
 def generate_sql(question, schema_text):
-    prompt = f"""You are an assistant that writes SQL queries.\n\n{schema_text}\n\nTranslate the question: {question}\nSQL:""""
+    prompt = f"""
+You are an assistant that writes SQL queries.
+
+{schema_text}
+
+Translate the following natural language question into a valid SQL query:
+Question: {question}
+SQL:
+"""
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
@@ -127,16 +179,13 @@ def generate_sql(question, schema_text):
     sql_code = response.choices[0].message.content.strip()
     return sql_code.replace("```sql", "").replace("```", "").strip()
 
-# 💬 Query
-text_query = st.text_input("💬 Ask your question (use exact column names):")
-user_input_addition = ""
-if text_query:
-    user_input_addition = st.text_area("✍️ Additional data for INSERT/UPDATE")
-
-# 🔎 Execute
+# 🔎 Query execution
 if text_query and table_info and conn:
     schema = build_schema_prompt(table_info, relationships)
-    full_prompt = text_query + ("\nDetails: " + user_input_addition if user_input_addition else "")
+
+    full_prompt = text_query
+    if user_input_addition:
+        full_prompt += "\nDetails: " + user_input_addition
     sql_query = generate_sql(full_prompt, schema)
     st.code(sql_query, language="sql")
 
@@ -144,39 +193,61 @@ if text_query and table_info and conn:
     is_write = any(sql_query.lower().strip().startswith(op) for op in write_ops)
 
     if is_write:
-        st.warning("⚠️ Write query detected. Confirm before execution.")
-        if st.button("✅ Confirm and Run"):
+        st.warning("⚠️ This appears to be a write operation.")
+
+        if sql_query.lower().startswith("create") or sql_query.lower().startswith("alter"):
+            st.info("📐 This will create or modify a table. Please review the SQL carefully.")
+
+        if st.button("✅ Confirm and Execute Write Query"):
             try:
                 cursor = conn.cursor()
                 cursor.execute(sql_query)
                 conn.commit()
-                st.success("✅ Executed successfully.")
+                st.success("✅ Write operation executed successfully.")
             except Exception as e:
-                st.error(f"❌ Execution failed: {e}")
+                st.error(f"❌ Error executing write query: {e}")
+        else:
+            st.stop()
     else:
         try:
             result_df = pd.read_sql_query(sql_query, conn)
             if result_df.empty:
-                st.warning("⚠️ No data found.")
+                st.warning("⚠️ Query ran, but no results found.")
             else:
-                st.success("✅ Query Result")
+                st.success("✅ Query Result:")
                 st.dataframe(result_df)
 
-                # 📥 Export
+                # 📥 CSV and Excel Export
                 excel_buffer = io.BytesIO()
                 with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
-                    result_df.to_excel(writer, index=False, sheet_name="Results")
+                    result_df.to_excel(writer, index=False, sheet_name="QueryResult")
                 csv_data = result_df.to_csv(index=False).encode("utf-8")
 
-                format_opt = st.selectbox("📁 Download Format", ["Excel", "CSV"])
-                if format_opt == "Excel":
-                    st.download_button("📤 Excel", excel_buffer.getvalue(), "query_result.xlsx",
-                                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                else:
-                    st.download_button("📄 CSV", csv_data, "query_result.csv", "text/csv")
+                st.download_button("📤 Download as Excel", excel_buffer.getvalue(), "query_result.xlsx",
+                                   mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+                st.download_button("📄 Download as CSV", csv_data, "query_result.csv", "text/csv")
+
+                # 📊 Chart
+                numeric_cols = result_df.select_dtypes(include="number").columns
+                if len(numeric_cols) > 0:
+                    st.subheader("📊 Visualize Data")
+                    selected_col = st.selectbox("Select numeric column to visualize", numeric_cols)
+                    chart_type = st.selectbox("Chart type", ["Bar Chart", "Line Chart", "Area Chart"])
+                    if chart_type == "Bar Chart":
+                        st.bar_chart(result_df[selected_col])
+                    elif chart_type == "Line Chart":
+                        st.line_chart(result_df[selected_col])
+                    elif chart_type == "Area Chart":
+                        st.area_chart(result_df[selected_col])
         except Exception as e:
             st.error(f"❌ SQL Error: {str(e)}")
 
-# Footer
+# 📝 Footer
 st.markdown("---")
-st.markdown("<div style='text-align:center; font-size: 0.9em;'>© 2025 AI SQL Assistant | Built by <strong>Your Name</strong></div>", unsafe_allow_html=True)
+st.markdown(
+    "<div style='text-align:center; font-size: 0.9em;'>"
+    "© 2025 AI SQL Assistant | Built by <strong>Your Name</strong> | "
+    "<a href='mailto:you@example.com'>Contact</a>"
+    "</div>", unsafe_allow_html=True
+)
