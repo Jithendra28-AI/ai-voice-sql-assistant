@@ -204,9 +204,8 @@ sql_query = sql_query.replace("```sql", "").replace("```", "").strip()
 st.code(sql_query, language="sql")
 
     # Execute or confirm
-        write_ops = ["insert", "update", "delete", "create", "drop", "alter"]
-        is_write = any(sql_query.lower().startswith(op) for op in write_ops)
-
+write_ops = ["insert", "update", "delete", "create", "drop", "alter"]
+is_write = any(sql_query.lower().startswith(op) for op in write_ops)
     if is_write:
         st.warning("⚠️ This appears to be a write operation.")
         if st.button("✅ Execute Write Query"):
