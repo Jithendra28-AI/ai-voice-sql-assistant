@@ -310,8 +310,7 @@ if st.button("📧 Send Usage Log to My Email"):
     st.success("📨 Email sent successfully.")
 
 def send_email_report(recipient, user_logs):
-    content = "
-".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
+    content = "\n".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
     msg = MIMEText(content)
     msg["From"] = "jithendra.anumala@du.edu"
     msg["To"] = jithendra.anumala@du.edu
