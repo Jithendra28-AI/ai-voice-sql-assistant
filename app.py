@@ -248,20 +248,35 @@ Question: {query}
             else:
                 st.info("ℹ️ No data to export.")
 
-            num_cols = df_result.select_dtypes(include="number").columns
-            if len(num_cols) > 0:
-                st.subheader("📊 Visualize")
-                col = st.selectbox("Select numeric column to plot", num_cols)
-                chart = alt.Chart(df_result).mark_bar().encode(
-                    x=alt.X(col, bin=True),
-                    y='count()'
-                )
-                st.altair_chart(chart, use_container_width=True)
-            else:
-                st.info("ℹ️ No numeric columns available to plot.")
+try:
+    num_cols = df_result.select_dtypes(include="number").columns
+    if len(num_cols) > 0:
+        st.subheader("📊 Visualize")
+        col = st.selectbox("Select numeric column to plot", num_cols)
+        chart_type = st.selectbox("Chart Type", ["Bar", "Line", "Area"])
 
-        except Exception as e:
-            st.error(f"❌ SQL Error: {e}")
+        if chart_type == "Bar":
+            chart = alt.Chart(df_result).mark_bar().encode(
+                x=alt.X(col, bin=True),
+                y='count()'
+            )
+        elif chart_type == "Line":
+            chart = alt.Chart(df_result).mark_line().encode(
+                x=col,
+                y='count()'
+            )
+        elif chart_type == "Area":
+            chart = alt.Chart(df_result).mark_area().encode(
+                x=col,
+                y='count()'
+            )
+
+        st.altair_chart(chart, use_container_width=True)
+    else:
+        st.info("ℹ️ No numeric columns available to plot.")
+except Exception as e:
+    st.error(f"❌ Charting Error: {e}")
+
 
 # 📝 Footer
 st.markdown("---")
