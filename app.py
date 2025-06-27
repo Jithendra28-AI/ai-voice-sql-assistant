@@ -5,6 +5,14 @@ import os
 from openai import OpenAI
 from graphviz import Digraph
 import io
+import datetime
+import csv
+import smtplib
+from io import StringIO
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+usage_logs = []
 
 # 🎨 Theme Toggle
 theme_mode = st.sidebar.radio("🎨 Theme", ["Light", "Dark"])
@@ -189,6 +197,12 @@ if text_query and table_info and conn:
     sql_query = generate_sql(full_prompt, schema)
     st.code(sql_query, language="sql")
 
+    usage_logs.append({
+        "timestamp": datetime.datetime.now().isoformat(),
+        "query": sql_query,
+        "db_type": db_type
+    })
+
     write_ops = ["insert", "update", "delete", "create", "drop", "alter"]
     is_write = any(sql_query.lower().strip().startswith(op) for op in write_ops)
 
@@ -242,6 +256,35 @@ if text_query and table_info and conn:
                         st.area_chart(result_df[selected_col])
         except Exception as e:
             st.error(f"❌ SQL Error: {str(e)}")
+
+def generate_log_csv(logs):
+    output = StringIO()
+    writer = csv.DictWriter(output, fieldnames=["timestamp", "db_type", "query"])
+    writer.writeheader()
+    writer.writerows(logs)
+    return output.getvalue()
+
+def send_email_report(recipient, csv_data):
+    msg = MIMEMultipart()
+    msg["From"] = "jithendra.anumala@du.edu"
+    msg["To"] = jithendra.anumala@du.edu
+    msg["Subject"] = "SQL Assistant Usage Report"
+
+    msg.attach(MIMEText("Attached is the usage log CSV from this session.", "plain"))
+
+    attachment = MIMEText(csv_data, "csv")
+    attachment.add_header("Content-Disposition", "attachment", filename="usage_log.csv")
+    msg.attach(attachment)
+
+    with smtplib.SMTP("smtp.gmail.com", 587) as server:
+        server.starttls()
+        server.login("you@example.com", st.secrets["EMAIL_APP_PASSWORD"])
+        server.send_message(msg)
+
+if st.button("📧 Send Usage Log to My Email"):
+    csv_report = generate_log_csv(usage_logs)
+    send_email_report("you@example.com", csv_report)
+    st.success("📨 Email sent successfully.")
 
 # 📝 Footer
 st.markdown("---")
