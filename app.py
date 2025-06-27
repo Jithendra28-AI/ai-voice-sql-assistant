@@ -8,6 +8,7 @@ import io
 import datetime
 import smtplib
 from email.mime.text import MIMEText
+import altair as alt
 
 usage_logs = []
 
@@ -118,24 +119,28 @@ st.title("🧠 AI SQL Assistant with Full Database Control")
 with st.expander("📘 How to use this app"):
     st.markdown("""
     1. Choose your database connection in the sidebar.
-    2. Upload CSVs (if SQLite) or connect to PostgreSQL/MySQL.
-    3. Define relationships if needed (e.g., `orders.customer_id = customers.id`).
+    2. Upload CSVs or Excel files (if SQLite) or connect to PostgreSQL/MySQL.
+    3. Define relationships (optional).
     4. Ask natural-language questions using column names.
-    5. Confirm and run write queries; view and download results.
+    5. Confirm and run write queries or preview results.
+    6. Edit data directly. Visualize with Altair charts.
     """)
 
-# 📂 Upload CSVs (if SQLite)
+# 📂 Upload Files (CSV and Excel)
 table_info = {}
 if db_type == "SQLite (local)":
-    uploaded_files = st.file_uploader("📂 Upload CSV files", type="csv", accept_multiple_files=True)
+    uploaded_files = st.file_uploader("📂 Upload CSV or Excel files", type=["csv", "xlsx"], accept_multiple_files=True)
     if uploaded_files:
         for file in uploaded_files:
             table_name = os.path.splitext(file.name)[0].replace(" ", "_").lower()
-            df = pd.read_csv(file)
+            if file.name.endswith(".csv"):
+                df = pd.read_csv(file)
+            else:
+                df = pd.read_excel(file)
+            df = st.data_editor(df, num_rows="dynamic", use_container_width=True, key=table_name)
             df.to_sql(table_name, conn, if_exists="replace", index=False)
             table_info[table_name] = df.columns.tolist()
             st.success(f"✅ Loaded `{file.name}` as `{table_name}`")
-            st.dataframe(df.head())
 else:
     if conn:
         try:
@@ -160,7 +165,9 @@ if table_info:
     st.subheader("🧩 Table Schema Visualizer")
     dot = Digraph()
     for table, cols in table_info.items():
-        dot.node(table, f"{table}\n" + "\n".join(cols))
+        dot.node(table, f"{table}
+" + "
+".join(cols))
     for rel in relationships.strip().splitlines():
         if "=" in rel:
             left, right = [x.strip() for x in rel.split("=")]
@@ -170,7 +177,6 @@ if table_info:
 
 # 💬 User Query
 text_query = st.text_input("💬 Ask your question (use exact column names):")
-
 user_input_addition = ""
 if text_query:
     user_input_addition = st.text_area(
@@ -178,13 +184,14 @@ if text_query:
         placeholder="e.g., name = 'John', age = 30"
     )
 
-# 🧠 Schema Builder
+# 🧠 Schema builder
 def build_schema_prompt(info, rels):
     schema = [f"{t}({', '.join(c)})" for t, c in info.items()]
     rel_lines = rels.strip().splitlines() if rels else []
-    return "\n".join(["TABLES:"] + schema + ["", "RELATIONSHIPS:"] + rel_lines)
+    return "
+".join(["TABLES:"] + schema + ["", "RELATIONSHIPS:"] + rel_lines)
 
-# 🤖 SQL Generator
+# 🤖 GPT SQL Generator
 def generate_sql(question, schema_text):
     prompt = f"""
 You are an assistant that writes SQL queries.
@@ -210,10 +217,11 @@ SQL:
 # 🔎 Query Execution
 if text_query and table_info and conn:
     schema = build_schema_prompt(table_info, relationships)
-
     full_prompt = text_query
     if user_input_addition:
-        full_prompt += "\nDetails: " + user_input_addition
+        full_prompt += "
+Details: " + user_input_addition
+
     sql_query = generate_sql(full_prompt, schema)
     st.code(sql_query, language="sql")
 
@@ -254,18 +262,16 @@ if text_query and table_info and conn:
                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
                 st.download_button("📄 Download as CSV", csv_data, "query_result.csv", "text/csv")
 
-                # 📊 Chart
+                # 📊 Altair Chart
                 numeric_cols = result_df.select_dtypes(include="number").columns
                 if len(numeric_cols) > 0:
                     st.subheader("📊 Visualize Data")
-                    selected_col = st.selectbox("Select numeric column to visualize", numeric_cols)
-                    chart_type = st.selectbox("Chart type", ["Bar Chart", "Line Chart", "Area Chart"])
-                    if chart_type == "Bar Chart":
-                        st.bar_chart(result_df[selected_col])
-                    elif chart_type == "Line Chart":
-                        st.line_chart(result_df[selected_col])
-                    elif chart_type == "Area Chart":
-                        st.area_chart(result_df[selected_col])
+                    selected_col = st.selectbox("Select numeric column", numeric_cols)
+                    chart = alt.Chart(result_df).mark_bar().encode(
+                        x=alt.X(selected_col, bin=True),
+                        y='count()'
+                    ).properties(width=600, height=400)
+                    st.altair_chart(chart)
         except Exception as e:
             st.error(f"❌ SQL Error: {str(e)}")
 
@@ -273,7 +279,9 @@ if text_query and table_info and conn:
 st.markdown("---")
 st.markdown(
     "<div style='text-align:center; font-size: 0.9em;'>"
-    "© 2025 AI SQL Assistant | Built by <strong>Your Name</strong> | "
-    "<a href='mailto:you@example.com'>Contact</a>"
+    "© 2025 AI SQL Assistant | Built by <strong>Jithendra Anumala</strong> | "
+    "<a href='mailto:anumalajithendra@gmail.com'>Contact</a>"
     "</div>", unsafe_allow_html=True
 )
+
+# Include generate_sql, schema builder, SQL execution, and Altair charting where needed
