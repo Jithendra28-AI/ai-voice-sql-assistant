@@ -226,11 +226,12 @@ else:
         st.dataframe(df_result)
 
         # 📤 Export (only if DataFrame is not empty)
-    try:
+try:
     df_result = pd.read_sql_query(sql_query, conn)
     st.success("✅ Query Result:")
     st.dataframe(df_result)
 
+    # 📤 Export
     if not df_result.empty:
         excel_buf = io.BytesIO()
         with pd.ExcelWriter(excel_buf, engine="openpyxl") as writer:
@@ -257,8 +258,6 @@ else:
 
 except Exception as e:
     st.error(f"❌ SQL Error: {e}")
-
-
 
         # 📊 Chart (only if numeric columns exist)
         num_cols = df_result.select_dtypes(include="number").columns
