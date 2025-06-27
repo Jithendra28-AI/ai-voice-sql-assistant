@@ -27,16 +27,16 @@ if "user_logged" not in st.session_state:
         def send_email_report(recipient, user_logs):
             content = "\n".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
             msg = MIMEText(content)
-            msg["From"] = "jithendra.anumala1@gmail.com"
+            msg["From"] = "anumalajithendra@gmail.com"
             msg["To"] = recipient
             msg["Subject"] = "AI SQL App - User Access Log"
 
             with smtplib.SMTP("smtp.gmail.com", 587) as server:
                 server.starttls()
-                server.login("jithendra.anumala1@gmail.com", st.secrets["EMAIL_APP_PASSWORD"])
+                server.login("anumalajithendra@gmail.com", st.secrets["EMAIL_APP_PASSWORD"])
                 server.send_message(msg)
 
-        send_email_report("jithendra.anumala1@gmail.com", usage_logs)
+        send_email_report("anumalajithendra@gmail.com", usage_logs)
     else:
         st.stop()
 
