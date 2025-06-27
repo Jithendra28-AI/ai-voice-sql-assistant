@@ -199,7 +199,6 @@ Question: {query}
         temperature=0,
         max_tokens=200
     )
-
 sql_query = response.choices[0].message.content.strip()
 sql_query = sql_query.replace("```sql", "").replace("```", "").strip()
 st.code(sql_query, language="sql")
