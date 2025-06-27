@@ -20,7 +20,7 @@ if "user_logged" not in st.session_state:
     st.title("🧑 Welcome!")
     st.markdown("Please enter your name or email to continue:")
     user_input = st.text_input("Your Name or Email")
-    
+
     if st.button("Continue") and user_input:
         st.session_state.user_id = user_input
         st.session_state.user_logged = True
@@ -149,7 +149,6 @@ if db_type == "SQLite (local)":
             df = st.data_editor(df, num_rows="dynamic", use_container_width=True, key=table_name)
             df.to_sql(table_name, conn, if_exists="replace", index=False)
             table_info[table_name] = df.columns.tolist()
-            st.success(f"✅ Loaded `{file.name}` as `{table_name}`")
 else:
     if conn:
         try:
@@ -204,76 +203,65 @@ Question: {query}
     sql_query = sql_query.replace("```sql", "").replace("```", "").strip()
     st.code(sql_query, language="sql")
 
-write_ops = ["insert", "update", "delete", "create", "drop", "alter"]
-is_write = any(sql_query.lower().startswith(op) for op in write_ops)
+    write_ops = ["insert", "update", "delete", "create", "drop", "alter"]
+    is_write = any(sql_query.lower().startswith(op) for op in write_ops)
 
-if is_write:
-    st.warning("⚠️ This appears to be a write operation.")
-    if st.button("✅ Execute Write Query"):
+    if is_write:
+        st.warning("⚠️ This appears to be a write operation.")
+        if st.button("✅ Execute Write Query"):
+            try:
+                cursor = conn.cursor()
+                cursor.execute(sql_query)
+                conn.commit()
+                st.success("✅ Write operation executed.")
+            except Exception as e:
+                st.error(f"❌ Error: {e}")
+        else:
+            st.stop()
+    else:
         try:
-            cursor = conn.cursor()
-            cursor.execute(sql_query)
-            conn.commit()
-            st.success("✅ Write operation executed.")
+            df_result = pd.read_sql_query(sql_query, conn)
+            st.success("✅ Query Result:")
+            st.dataframe(df_result)
+
+            if not df_result.empty:
+                excel_buf = io.BytesIO()
+                with pd.ExcelWriter(excel_buf, engine="openpyxl") as writer:
+                    df_result.to_excel(writer, index=False, sheet_name="Results")
+                csv_buf = df_result.to_csv(index=False).encode("utf-8")
+
+                st.download_button(
+                    "📤 Download Excel",
+                    excel_buf.getvalue(),
+                    "results.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="download_excel"
+                )
+
+                st.download_button(
+                    "📄 Download CSV",
+                    csv_buf,
+                    "results.csv",
+                    mime="text/csv",
+                    key="download_csv"
+                )
+            else:
+                st.info("ℹ️ No data to export.")
+
+            num_cols = df_result.select_dtypes(include="number").columns
+            if len(num_cols) > 0:
+                st.subheader("📊 Visualize")
+                col = st.selectbox("Select numeric column to plot", num_cols)
+                chart = alt.Chart(df_result).mark_bar().encode(
+                    x=alt.X(col, bin=True),
+                    y='count()'
+                )
+                st.altair_chart(chart, use_container_width=True)
+            else:
+                st.info("ℹ️ No numeric columns available to plot.")
+
         except Exception as e:
-            st.error(f"❌ Error: {e}")
-    else:
-        st.stop()
-else:
-    try:
-        df_result = pd.read_sql_query(sql_query, conn)
-        st.success("✅ Query Result:")
-        st.dataframe(df_result)
-
-        # 📤 Export (only if DataFrame is not empty)
-try:
-    df_result = pd.read_sql_query(sql_query, conn)
-    st.success("✅ Query Result:")
-    st.dataframe(df_result)
-
-    # 📤 Export
-    if not df_result.empty:
-        excel_buf = io.BytesIO()
-        with pd.ExcelWriter(excel_buf, engine="openpyxl") as writer:
-            df_result.to_excel(writer, index=False, sheet_name="Results")
-        csv_buf = df_result.to_csv(index=False).encode("utf-8")
-
-        st.download_button(
-            "📤 Download Excel",
-            excel_buf.getvalue(),
-            "results.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            key="download_excel"
-        )
-
-        st.download_button(
-            "📄 Download CSV",
-            csv_buf,
-            "results.csv",
-            mime="text/csv",
-            key="download_csv"
-        )
-    else:
-        st.info("ℹ️ No data to export.")
-
-    # 📊 Chart
-    num_cols = df_result.select_dtypes(include="number").columns
-    if len(num_cols) > 0:
-        st.subheader("📊 Visualize")
-        col = st.selectbox("Select numeric column to plot", num_cols)
-        chart = alt.Chart(df_result).mark_bar().encode(
-            x=alt.X(col, bin=True),
-            y='count()'
-        )
-        st.altair_chart(chart, use_container_width=True)
-    else:
-        st.info("ℹ️ No numeric columns available to plot.")
-
-except Exception as e:
-    st.error(f"❌ SQL Error: {e}")
-
-
-
+            st.error(f"❌ SQL Error: {e}")
 
 # 📝 Footer
 st.markdown("---")
