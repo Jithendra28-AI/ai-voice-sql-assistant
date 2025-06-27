@@ -170,8 +170,7 @@ relationships = st.text_area("🔗 Table Relationships (e.g., orders.customer_id
 
 # 🧠 Build schema for GPT
 schema = [f"{t}({', '.join(cols)})" for t, cols in table_info.items()]
-schema_text = .join(["TABLES:"] + schema + ["", "RELATIONSHIPS:"] + relationships.splitlines())
-
+schema_text = "\n".join(["TABLES:"] + schema + ["", "RELATIONSHIPS:"] + relationships.splitlines())
 # 💬 Query input
 query = st.text_input("💬 Ask your question (use column names from your tables):")
 extra_data = st.text_area("✍️ Optional data (for INSERT/UPDATE queries)", placeholder="e.g., name = 'John', age = 30")
