@@ -1,3 +1,4 @@
+
 import streamlit as st
 import sqlite3
 import pandas as pd
@@ -171,6 +172,7 @@ relationships = st.text_area("🔗 Table Relationships (e.g., orders.customer_id
 # 🧠 Build schema for GPT
 schema = [f"{t}({', '.join(cols)})" for t, cols in table_info.items()]
 schema_text = "\n".join(["TABLES:"] + schema + ["", "RELATIONSHIPS:"] + relationships.splitlines())
+
 # 💬 Query input
 query = st.text_input("💬 Ask your question (use column names from your tables):")
 extra_data = st.text_area("✍️ Optional data (for INSERT/UPDATE queries)", placeholder="e.g., name = 'John', age = 30")
@@ -185,31 +187,30 @@ You are an assistant that writes SQL queries.
 Translate the following natural language question into a valid SQL query:
 Question: {query}
 """
-if extra_data:
-    prompt += f"\nAdditional details: {extra_data}"
+    if extra_data:
+        prompt += f"\nAdditional details: {extra_data}"
 
-response = client.chat.completions.create(
-    model="gpt-3.5-turbo",
-    messages=[
-        {"role": "system", "content": "You write SQL queries using JOINs when needed."},
-        {"role": "user", "content": prompt}
-    ],
-    temperature=0,
-    max_tokens=200
-)
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You write SQL queries using JOINs when needed."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0,
+        max_tokens=200
+    )
 
-sql_query = response.choices[0].message.content.strip()
-sql_query = sql_query.replace("```sql", "").replace("```", "").strip()
-st.code(sql_query, language="sql")
-
+    sql_query = response.choices[0].message.content.strip()
+    sql_query = sql_query.replace("```sql", "").replace("```", "").strip()
+    st.code(sql_query, language="sql")
 
     # Execute or confirm
     write_ops = ["insert", "update", "delete", "create", "drop", "alter"]
-is_write = any(sql_query.lower().startswith(op) for op in write_ops)
+    is_write = any(sql_query.lower().startswith(op) for op in write_ops)
 
-if is_write:
-    st.warning("⚠️ This appears to be a write operation.")
-    if st.button("✅ Execute Write Query"):
+    if is_write:
+        st.warning("⚠️ This appears to be a write operation.")
+        if st.button("✅ Execute Write Query"):
             try:
                 cursor = conn.cursor()
                 cursor.execute(sql_query)
@@ -246,6 +247,8 @@ if is_write:
                 st.altair_chart(chart)
         except Exception as e:
             st.error(f"❌ SQL Error: {e}")
+
+
 
 
 # 📝 Footer
