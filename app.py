@@ -165,9 +165,7 @@ if table_info:
     st.subheader("🧩 Table Schema Visualizer")
     dot = Digraph()
     for table, cols in table_info.items():
-        dot.node(table, f"{table}
-" + "
-".join(cols))
+        dot.node(table, f"{table}\n" + "\n".join(cols))
     for rel in relationships.strip().splitlines():
         if "=" in rel:
             left, right = [x.strip() for x in rel.split("=")]
@@ -188,8 +186,7 @@ if text_query:
 def build_schema_prompt(info, rels):
     schema = [f"{t}({', '.join(c)})" for t, c in info.items()]
     rel_lines = rels.strip().splitlines() if rels else []
-    return "
-".join(["TABLES:"] + schema + ["", "RELATIONSHIPS:"] + rel_lines)
+    return "\n".join(["TABLES:"] + schema + ["", "RELATIONSHIPS:"] + rel_lines)
 
 # 🤖 GPT SQL Generator
 def generate_sql(question, schema_text):
@@ -219,8 +216,7 @@ if text_query and table_info and conn:
     schema = build_schema_prompt(table_info, relationships)
     full_prompt = text_query
     if user_input_addition:
-        full_prompt += "
-Details: " + user_input_addition
+        full_prompt += "\nDetails: " + user_input_addition
 
     sql_query = generate_sql(full_prompt, schema)
     st.code(sql_query, language="sql")
@@ -283,5 +279,3 @@ st.markdown(
     "<a href='mailto:anumalajithendra@gmail.com'>Contact</a>"
     "</div>", unsafe_allow_html=True
 )
-
-# Include generate_sql, schema builder, SQL execution, and Altair charting where needed
