@@ -17,29 +17,38 @@ theme_mode = st.sidebar.radio("🎨 Theme", ["Light", "Dark"])
 
 # 🧑 Track User & Send Email
 if "user_logged" not in st.session_state:
-    st.session_state.user_id = st.text_input("🧑 Please enter your name or email to continue")
-    if st.session_state.user_id:
-        st.session_state.user_logged = True
-        usage_logs.append({
-            "timestamp": datetime.datetime.now().isoformat(),
-            "user": st.session_state.user_id
-        })
+    with st.modal("🧑 Welcome!"):
+        st.markdown("## Please enter your name or email to continue")
+        user_input = st.text_input("Your Name or Email")
+        if st.button("Continue") and user_input:
+            st.session_state.user_id = user_input
+            st.session_state.user_logged = True
+            usage_logs.append({
+                "timestamp": datetime.datetime.now().isoformat(),
+                "user": user_input
+            })
 
-        def send_email_report(recipient, user_logs):
-            content = "\n".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
-            msg = MIMEText(content)
-            msg["From"] = "anumalajithendra@gmail.com"
-            msg["To"] = recipient
-            msg["Subject"] = "AI SQL App - User Access Log"
+            def send_email_report(recipient, user_logs):
+                content = "\n".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
+                msg = MIMEText(content)
+                msg["From"] = "anumalajithendra@gmail.com"
+                msg["To"] = recipient
+                msg["Subject"] = "AI SQL App - User Access Log"
 
-            with smtplib.SMTP("smtp.gmail.com", 587) as server:
-                server.starttls()
-                server.login("anumalajithendra@gmail.com", st.secrets["EMAIL_APP_PASSWORD"])
-                server.send_message(msg)
+                with smtplib.SMTP("smtp.gmail.com", 587) as server:
+                    server.starttls()
+                    server.login("anumalajithendra@gmail.com", st.secrets["EMAIL_APP_PASSWORD"])
+                    server.send_message(msg)
 
-        send_email_report("anumalajithendra@gmail.com", usage_logs)
-    else:
-        st.stop()
+            send_email_report("anumalajithendra@gmail.com", usage_logs)
+            st.rerun()
+    st.stop()
+
+# Show user name in corner
+st.markdown(
+    f"<div style='position: fixed; top: 10px; right: 20px; color: gray;'>👋 Hello, <strong>{st.session_state.user_id}</strong></div>",
+    unsafe_allow_html=True
+)
 
 # 📡 Sidebar: Connect to a Live Database
 st.sidebar.title("🔌 Connect to a Live Database")
@@ -94,7 +103,6 @@ section.main > div {
 </style>
 """, unsafe_allow_html=True)
 
-# 🌙 Dark Theme
 if theme_mode == "Dark":
     st.markdown("""
     <style>
@@ -157,48 +165,32 @@ else:
         except Exception as e:
             st.error(f"Could not load schema: {e}")
 
-# 🔗 Table Relationships
-relationships = st.text_area("🔗 Define table relationships (JOINs)", placeholder="orders.customer_id = customers.id")
+# 🔗 Define Table Relationships
+relationships = st.text_area("🔗 Table Relationships (e.g., orders.customer_id = customers.id)")
 
-# 🧱 Schema Visualizer
-if table_info:
-    st.subheader("🧩 Table Schema Visualizer")
-    dot = Digraph()
-    for table, cols in table_info.items():
-        dot.node(table, f"{table}\n" + "\n".join(cols))
-    for rel in relationships.strip().splitlines():
-        if "=" in rel:
-            left, right = [x.strip() for x in rel.split("=")]
-            lt, rt = left.split(".")[0], right.split(".")[0]
-            dot.edge(lt, rt, label=rel)
-    st.graphviz_chart(dot)
+# 🧠 Build schema for GPT
+schema = [f"{t}({', '.join(cols)})" for t, cols in table_info.items()]
+schema_text = "
+".join(["TABLES:"] + schema + ["", "RELATIONSHIPS:"] + relationships.splitlines())
 
-# 💬 User Query
-text_query = st.text_input("💬 Ask your question (use exact column names):")
-user_input_addition = ""
-if text_query:
-    user_input_addition = st.text_area(
-        "✍️ Additional data/details for INSERT, UPDATE, etc.",
-        placeholder="e.g., name = 'John', age = 30"
-    )
+# 💬 Query input
+query = st.text_input("💬 Ask your question (use column names from your tables):")
+extra_data = st.text_area("✍️ Optional data (for INSERT/UPDATE queries)", placeholder="e.g., name = 'John', age = 30")
 
-# 🧠 Schema builder
-def build_schema_prompt(info, rels):
-    schema = [f"{t}({', '.join(c)})" for t, c in info.items()]
-    rel_lines = rels.strip().splitlines() if rels else []
-    return "\n".join(["TABLES:"] + schema + ["", "RELATIONSHIPS:"] + rel_lines)
-
-# 🤖 GPT SQL Generator
-def generate_sql(question, schema_text):
+# Generate SQL using GPT
+if query:
     prompt = f"""
 You are an assistant that writes SQL queries.
 
 {schema_text}
 
 Translate the following natural language question into a valid SQL query:
-Question: {question}
-SQL:
+Question: {query}
 """
+    if extra_data:
+        prompt += f"
+Additional details: {extra_data}"
+
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
@@ -208,68 +200,55 @@ SQL:
         temperature=0,
         max_tokens=200
     )
-    sql_code = response.choices[0].message.content.strip()
-    return sql_code.replace("```sql", "").replace("```", "").strip()
+    sql_query = response.choices[0].message.content.strip()
+    sql_query = sql_query.replace("```sql", "").replace("```", "").strip()
 
-# 🔎 Query Execution
-if text_query and table_info and conn:
-    schema = build_schema_prompt(table_info, relationships)
-    full_prompt = text_query
-    if user_input_addition:
-        full_prompt += "\nDetails: " + user_input_addition
-
-    sql_query = generate_sql(full_prompt, schema)
     st.code(sql_query, language="sql")
 
+    # Execute or confirm
     write_ops = ["insert", "update", "delete", "create", "drop", "alter"]
-    is_write = any(sql_query.lower().strip().startswith(op) for op in write_ops)
+    is_write = any(sql_query.lower().startswith(op) for op in write_ops)
 
     if is_write:
         st.warning("⚠️ This appears to be a write operation.")
-        if sql_query.lower().startswith("create") or sql_query.lower().startswith("alter"):
-            st.info("📐 This will create or modify a table.")
-
-        if st.button("✅ Confirm and Execute Write Query"):
+        if st.button("✅ Execute Write Query"):
             try:
                 cursor = conn.cursor()
                 cursor.execute(sql_query)
                 conn.commit()
-                st.success("✅ Write operation executed successfully.")
+                st.success("✅ Write operation executed.")
             except Exception as e:
-                st.error(f"❌ Error executing write query: {e}")
+                st.error(f"❌ Error: {e}")
         else:
             st.stop()
     else:
         try:
-            result_df = pd.read_sql_query(sql_query, conn)
-            if result_df.empty:
-                st.warning("⚠️ Query ran, but no results found.")
-            else:
-                st.success("✅ Query Result:")
-                st.dataframe(result_df)
+            df_result = pd.read_sql_query(sql_query, conn)
+            st.success("✅ Query Result:")
+            st.dataframe(df_result)
 
-                # 📥 Export
-                excel_buffer = io.BytesIO()
-                with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
-                    result_df.to_excel(writer, index=False, sheet_name="QueryResult")
-                csv_data = result_df.to_csv(index=False).encode("utf-8")
+            # 📤 Export
+            excel_buf = io.BytesIO()
+            with pd.ExcelWriter(excel_buf, engine="openpyxl") as writer:
+                df_result.to_excel(writer, index=False)
+            csv_buf = df_result.to_csv(index=False).encode("utf-8")
 
-                st.download_button("📤 Download as Excel", excel_buffer.getvalue(), "query_result.xlsx",
-                                   mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                st.download_button("📄 Download as CSV", csv_data, "query_result.csv", "text/csv")
+            st.download_button("📤 Download Excel", excel_buf.getvalue(), "results.xlsx")
+            st.download_button("📄 Download CSV", csv_buf, "results.csv")
 
-                # 📊 Altair Chart
-                numeric_cols = result_df.select_dtypes(include="number").columns
-                if len(numeric_cols) > 0:
-                    st.subheader("📊 Visualize Data")
-                    selected_col = st.selectbox("Select numeric column", numeric_cols)
-                    chart = alt.Chart(result_df).mark_bar().encode(
-                        x=alt.X(selected_col, bin=True),
-                        y='count()'
-                    ).properties(width=600, height=400)
-                    st.altair_chart(chart)
+            # 📊 Chart
+            num_cols = df_result.select_dtypes(include="number").columns
+            if len(num_cols) > 0:
+                st.subheader("📊 Visualize")
+                col = st.selectbox("Select column to plot", num_cols)
+                chart = alt.Chart(df_result).mark_bar().encode(
+                    x=alt.X(col, bin=True),
+                    y='count()'
+                )
+                st.altair_chart(chart)
         except Exception as e:
-            st.error(f"❌ SQL Error: {str(e)}")
+            st.error(f"❌ SQL Error: {e}")
+
 
 # 📝 Footer
 st.markdown("---")
