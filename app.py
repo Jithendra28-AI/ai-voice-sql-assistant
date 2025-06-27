@@ -44,12 +44,6 @@ if "user_logged" not in st.session_state:
         st.rerun()
     st.stop()
 
-# Show user name in corner
-st.markdown(
-    f"<div style='position: fixed; top: 10px; center: 20px; color: gray;'>👋 Hello, <strong>{st.session_state.user_id}</strong></div>",
-    unsafe_allow_html=True
-)
-
 # 📡 Sidebar: Connect to a Live Database
 st.sidebar.title("🔌 Connect to a Live Database")
 db_type = st.sidebar.selectbox("Database Type", ["SQLite (local)", "PostgreSQL", "MySQL"])
@@ -86,7 +80,12 @@ else:
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # 🧠 Title
-st.title("🧠 AI SQL Assistant with Full Database Control")
+st.title("🧠 AI SQL Assistant with Full Database Control" 
+        # Show user name in corner
+st.markdown(
+    f"<div style='position: fixed; top: 10px; center: 20px; color: gray;'>👋 Hello, <strong>{st.session_state.user_id}</strong></div>",
+    unsafe_allow_html=True
+))
 
 # 📘 Help Guide
 with st.expander("📘 How to use this app"):
