@@ -226,7 +226,7 @@ else:
         st.dataframe(df_result)
 
         # 📤 Export (only if DataFrame is not empty)
-try:
+    try:
     df_result = pd.read_sql_query(sql_query, conn)
     st.success("✅ Query Result:")
     st.dataframe(df_result)
