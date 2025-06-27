@@ -13,8 +13,6 @@ import altair as alt
 
 usage_logs = []
 
-# 🎨 Theme Toggle
-theme_mode = st.sidebar.radio("🎨 Theme", ["Light", "Dark"])
 
 # 🧑 Track User & Send Email
 if "user_logged" not in st.session_state:
@@ -48,7 +46,7 @@ if "user_logged" not in st.session_state:
 
 # Show user name in corner
 st.markdown(
-    f"<div style='position: fixed; top: 10px; right: 20px; color: gray;'>👋 Hello, <strong>{st.session_state.user_id}</strong></div>",
+    f"<div style='position: fixed; top: 10px; left: 20px; color: gray;'>👋 Hello, <strong>{st.session_state.user_id}</strong></div>",
     unsafe_allow_html=True
 )
 
