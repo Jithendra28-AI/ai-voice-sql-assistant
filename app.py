@@ -226,16 +226,30 @@ else:
         st.dataframe(df_result)
 
         # 📤 Export (only if DataFrame is not empty)
-        if not df_result.empty:
-            excel_buf = io.BytesIO()
-            with pd.ExcelWriter(excel_buf, engine="openpyxl") as writer:
-                df_result.to_excel(writer, index=False, sheet_name="Results")
-            csv_buf = df_result.to_csv(index=False).encode("utf-8")
+if not df_result.empty:
+    excel_buf = io.BytesIO()
+    with pd.ExcelWriter(excel_buf, engine="openpyxl") as writer:
+        df_result.to_excel(writer, index=False, sheet_name="Results")
+    csv_buf = df_result.to_csv(index=False).encode("utf-8")
 
-            st.download_button("📤 Download Excel", excel_buf.getvalue(), "results.xlsx")
-            st.download_button("📄 Download CSV", csv_buf, "results.csv")
-        else:
-            st.info("ℹ️ No data to export.")
+    st.download_button(
+        "📤 Download Excel",
+        excel_buf.getvalue(),
+        "results.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        key="download_excel"
+    )
+
+    st.download_button(
+        "📄 Download CSV",
+        csv_buf,
+        "results.csv",
+        mime="text/csv",
+        key="download_csv"
+    )
+else:
+    st.info("ℹ️ No data to export.")
+
 
         # 📊 Chart (only if numeric columns exist)
         num_cols = df_result.select_dtypes(include="number").columns
