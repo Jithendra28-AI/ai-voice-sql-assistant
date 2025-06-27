@@ -24,15 +24,16 @@ if "user_logged" not in st.session_state:
             "user": st.session_state.user_id
         })
         def send_email_report(recipient, user_logs):
-        content = "\n".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
-            msg = MIMEText(content)
-            msg["From"] = "jithendra.anumala@du.edu"
-            msg["To"] = recipient
-            msg["Subject"] = "AI SQL App - New User Access"
+    content = "\n".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
+    msg = MIMEText(content)
+    msg["From"] = "jithendra.anumala@du.edu"
+    msg["To"] = "jithendra.anumala@du.edu"
+    msg["Subject"] = "AI SQL App - User Access Log"
 
-            with smtplib.SMTP("smtp.gmail.com", 587) as server:
-                server.starttls()
-                server.login("jithendra.anumala@du.edu", st.secrets["EMAIL_APP_PASSWORD"])
+    with smtplib.SMTP("smtp.gmail.com", 587) as server:
+        server.starttls()
+        server.login("jithendra.anumala@du.edu", st.secrets["EMAIL_APP_PASSWORD"])
+        server.send_message(msg)
                 server.send_message(msg)
         send_email_report("jithendra.anumala@du.edu", usage_logs)
     else:
@@ -304,16 +305,13 @@ def send_email_report(recipient, csv_data):
         server.login("you@example.com", st.secrets["EMAIL_APP_PASSWORD"])
         server.send_message(msg)
 
-if st.button("📧 Send Usage Log to My Email"):
-    csv_report = generate_log_csv(usage_logs)
-    send_email_report("you@example.com", csv_report)
-    st.success("📨 Email sent successfully.")
+
 
 def send_email_report(recipient, user_logs):
-    content = "\n".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
+     content = "\n".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
     msg = MIMEText(content)
     msg["From"] = "jithendra.anumala@du.edu"
-    msg["To"] = jithendra.anumala@du.edu
+    msg["To"] = recipient
     msg["Subject"] = "AI SQL App - User Access Log"
 
     with smtplib.SMTP("smtp.gmail.com", 587) as server:
