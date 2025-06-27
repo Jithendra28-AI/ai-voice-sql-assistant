@@ -6,16 +6,22 @@ from openai import OpenAI
 from graphviz import Digraph
 import io
 import datetime
-import csv
 import smtplib
-from io import StringIO
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-
 usage_logs = []
 
 # 🎨 Theme Toggle
 theme_mode = st.sidebar.radio("🎨 Theme", ["Light", "Dark"])
+
+# 🧑 Track User
+user_id = st.sidebar.text_input("🧑 Enter your name or email to use this app")
+if user_id and "user_logged" not in st.session_state:
+    st.session_state["user_logged"] = True
+    usage_logs.append({
+        "timestamp": datetime.datetime.now().isoformat(),
+        "user": user_id
+    })
 
 # 📡 Sidebar: Connect to a Live Database
 st.sidebar.title("🔌 Connect to a Live Database")
@@ -266,8 +272,8 @@ def generate_log_csv(logs):
 
 def send_email_report(recipient, csv_data):
     msg = MIMEMultipart()
-    msg["From"] = "jithendra.anumala@du.edu"
-    msg["To"] = jithendra.anumala@du.edu
+    msg["From"] = "you@example.com"
+    msg["To"] = recipient
     msg["Subject"] = "SQL Assistant Usage Report"
 
     msg.attach(MIMEText("Attached is the usage log CSV from this session.", "plain"))
@@ -285,6 +291,23 @@ if st.button("📧 Send Usage Log to My Email"):
     csv_report = generate_log_csv(usage_logs)
     send_email_report("you@example.com", csv_report)
     st.success("📨 Email sent successfully.")
+
+def send_email_report(recipient, user_logs):
+    content = "
+".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
+    msg = MIMEText(content)
+    msg["From"] = "jithendra.anumala@du.edu"
+    msg["To"] = recipient
+    msg["Subject"] = "AI SQL App - User Access Log"
+
+    with smtplib.SMTP("smtp.gmail.com", 587) as server:
+        server.starttls()
+        server.login("jithendra.anumala@du.edu", st.secrets["EMAIL_APP_PASSWORD"])
+        server.send_message(msg)
+
+if st.button("📧 Email Me Who Used This App"):
+    send_email_report("jithendra.anumala@du.edu", usage_logs)
+    st.success("✅ Sent user access log to your email.")
 
 # 📝 Footer
 st.markdown("---")
