@@ -149,6 +149,7 @@ if db_type == "SQLite (local)":
             df = st.data_editor(df, num_rows="dynamic", use_container_width=True, key=table_name)
             df.to_sql(table_name, conn, if_exists="replace", index=False)
             table_info[table_name] = df.columns.tolist()
+            st.success(f"✅ Loaded `{file.name}` as `{table_name}`")
 else:
     if conn:
         try:
@@ -230,53 +231,40 @@ Question: {query}
                     df_result.to_excel(writer, index=False, sheet_name="Results")
                 csv_buf = df_result.to_csv(index=False).encode("utf-8")
 
-                st.download_button(
-                    "📤 Download Excel",
-                    excel_buf.getvalue(),
-                    "results.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key="download_excel"
-                )
+                st.download_button("📤 Download Excel", excel_buf.getvalue(), "results.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key="download_excel")
+                st.download_button("📄 Download CSV", csv_buf, "results.csv", mime="text/csv", key="download_csv")
 
-                st.download_button(
-                    "📄 Download CSV",
-                    csv_buf,
-                    "results.csv",
-                    mime="text/csv",
-                    key="download_csv"
-                )
+                # 📊 Chart with type selector
+                num_cols = df_result.select_dtypes(include="number").columns
+                if len(num_cols) > 0:
+                    st.subheader("📊 Visualize")
+                    col = st.selectbox("Select numeric column to plot", num_cols)
+                    chart_type = st.selectbox("Chart type", ["Bar", "Line", "Area"])
+
+                    if chart_type == "Bar":
+                        chart = alt.Chart(df_result).mark_bar().encode(
+                            x=alt.X(col, bin=True),
+                            y='count()'
+                        )
+                    elif chart_type == "Line":
+                        chart = alt.Chart(df_result).mark_line().encode(
+                            x=alt.X(df_result.index.name or "index"),
+                            y=col
+                        )
+                    else:
+                        chart = alt.Chart(df_result).mark_area().encode(
+                            x=alt.X(df_result.index.name or "index"),
+                            y=col
+                        )
+
+                    st.altair_chart(chart, use_container_width=True)
+                else:
+                    st.info("ℹ️ No numeric columns available to plot.")
             else:
-                st.info("ℹ️ No data to export.")
+                st.info("ℹ️ No data to export or visualize.")
 
-    try:
-    num_cols = df_result.select_dtypes(include="number").columns
-    if len(num_cols) > 0:
-        st.subheader("📊 Visualize")
-        col = st.selectbox("Select numeric column to plot", num_cols)
-        chart_type = st.selectbox("Chart Type", ["Bar", "Line", "Area"])
-
-        if chart_type == "Bar":
-            chart = alt.Chart(df_result).mark_bar().encode(
-                x=alt.X(col, bin=True),
-                y='count()'
-            )
-        elif chart_type == "Line":
-            chart = alt.Chart(df_result).mark_line().encode(
-                x=col,
-                y='count()'
-            )
-        elif chart_type == "Area":
-            chart = alt.Chart(df_result).mark_area().encode(
-                x=col,
-                y='count()'
-            )
-
-        st.altair_chart(chart, use_container_width=True)
-    else:
-        st.info("ℹ️ No numeric columns available to plot.")
-except Exception as e:
-    st.error(f"❌ Charting Error: {e}")
-
+        except Exception as e:
+            st.error(f"❌ SQL Error: {e}")
 
 # 📝 Footer
 st.markdown("---")
