@@ -82,41 +82,6 @@ else:
     conn = sqlite3.connect("multi.db")
     st.sidebar.success("🗂️ Using local SQLite database from uploaded CSVs.")
 
-# 🌿 Background Styling
-st.markdown("""
-<style>
-[data-testid="stAppViewContainer"] {
-    background-image: url("");
-    background-size: cover;
-    background-attachment: fixed;
-    background-position: center;
-    background-repeat: no-repeat;
-}
-[data-testid="stHeader"] {
-    background-color: rgba(255, 255, 255, 0);
-}
-section.main > div {
-    background-color: rgba(255, 255, 255, 0.88);
-    padding: 1rem;
-    border-radius: 10px;
-}
-</style>
-""", unsafe_allow_html=True)
-
-if theme_mode == "Dark":
-    st.markdown("""
-    <style>
-    body {
-        background-color: #0e1117;
-        color: #ffffff;
-    }
-    .stApp {
-        background-color: #0e1117;
-        color: #ffffff;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
 # 🔐 OpenAI Client
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
