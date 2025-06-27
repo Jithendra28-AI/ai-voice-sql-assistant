@@ -242,17 +242,24 @@ else:
 
 
             # 📊 Chart
-            num_cols = df_result.select_dtypes(include="number").columns
-            if len(num_cols) > 0:
-                st.subheader("📊 Visualize")
-                col = st.selectbox("Select column to plot", num_cols)
-                chart = alt.Chart(df_result).mark_bar().encode(
-                    x=alt.X(col, bin=True),
-                    y='count()'
-                )
-                st.altair_chart(chart)
-        except Exception as e:
-            st.error(f"❌ SQL Error: {e}")
+            # 📊 Chart (wrap in try-except and check for numeric columns)
+try:
+    if not df_result.empty:
+        num_cols = df_result.select_dtypes(include="number").columns
+        if len(num_cols) > 0:
+            st.subheader("📊 Visualize")
+            col = st.selectbox("Select numeric column to plot", num_cols)
+            chart = alt.Chart(df_result).mark_bar().encode(
+                x=alt.X(col, bin=True),
+                y='count()'
+            )
+            st.altair_chart(chart, use_container_width=True)
+        else:
+            st.info("ℹ️ No numeric columns available to plot.")
+    else:
+        st.info("ℹ️ No results to visualize.")
+except Exception as e:
+    st.error(f"❌ Charting error: {e}")
 
 
 
