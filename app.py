@@ -186,9 +186,8 @@ Translate the following natural language question into a valid SQL query:
 Question: {query}
 """
     if extra_data:
-        prompt += f"
-Additional details: {extra_data}"
-
+       prompt += f"\nAdditional details: {extra_data}"
+prompt += f"\nAdditional details: {extra_data}"
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
