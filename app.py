@@ -187,8 +187,7 @@ Question: {query}
 """
 if extra_data:
     prompt += f"\nAdditional details: {extra_data}"
-
-response = client.chat.completions.create(
+ response = client.chat.completions.create(
     model="gpt-3.5-turbo",
     messages=[
         {"role": "system", "content": "You write SQL queries using JOINs when needed."},
@@ -197,10 +196,9 @@ response = client.chat.completions.create(
     temperature=0,
     max_tokens=200
 )
-   sql_query = response.choices[0].message.content.strip()
-    sql_query = sql_query.replace("```sql", "").replace("```", "").strip()
-
-    st.code(sql_query, language="sql")
+sql_query = response.choices[0].message.content.strip()
+sql_query = sql_query.replace("```sql", "").replace("```", "").strip()
+st.code(sql_query, language="sql")
 
     # Execute or confirm
     write_ops = ["insert", "update", "delete", "create", "drop", "alter"]
