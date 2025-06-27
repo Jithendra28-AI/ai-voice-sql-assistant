@@ -187,18 +187,18 @@ You are an assistant that writes SQL queries.
 Translate the following natural language question into a valid SQL query:
 Question: {query}
 """
-if extra_data:
-    prompt += f"\nAdditional details: {extra_data}"
+    if extra_data:
+        prompt += f"\nAdditional details: {extra_data}"
 
-response = client.chat.completions.create(
-    model="gpt-3.5-turbo",
-    messages=[
-        {"role": "system", "content": "You write SQL queries using JOINs when needed."},
-        {"role": "user", "content": prompt}
-    ],
-    temperature=0,
-    max_tokens=200
-)
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You write SQL queries using JOINs when needed."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0,
+        max_tokens=200
+    )
 
 sql_query = response.choices[0].message.content.strip()
 sql_query = sql_query.replace("```sql", "").replace("```", "").strip()
