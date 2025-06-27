@@ -5,16 +5,45 @@ import os
 from openai import OpenAI
 from graphviz import Digraph
 import io
+import datetime
+import smtplib
+from email.mime.text import MIMEText
+
+usage_logs = []
 
 # 🎨 Theme Toggle
 theme_mode = st.sidebar.radio("🎨 Theme", ["Light", "Dark"])
 
+# 🧑 Track User & Send Email
+if "user_logged" not in st.session_state:
+    st.session_state.user_id = st.text_input("🧑 Please enter your name or email to continue")
+    if st.session_state.user_id:
+        st.session_state.user_logged = True
+        usage_logs.append({
+            "timestamp": datetime.datetime.now().isoformat(),
+            "user": st.session_state.user_id
+        })
+
+        def send_email_report(recipient, user_logs):
+            content = "\n".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
+            msg = MIMEText(content)
+            msg["From"] = "jithendra.anumala@du.edu"
+            msg["To"] = recipient
+            msg["Subject"] = "AI SQL App - User Access Log"
+
+            with smtplib.SMTP("smtp.gmail.com", 587) as server:
+                server.starttls()
+                server.login("jithendra.anumala@du.edu", st.secrets["EMAIL_APP_PASSWORD"])
+                server.send_message(msg)
+
+        send_email_report("jithendra.anumala@du.edu", usage_logs)
+    else:
+        st.stop()
+
 # 📡 Sidebar: Connect to a Live Database
 st.sidebar.title("🔌 Connect to a Live Database")
-
 db_type = st.sidebar.selectbox("Database Type", ["SQLite (local)", "PostgreSQL", "MySQL"])
-
-conn = None  # Define connection object
+conn = None
 
 if db_type != "SQLite (local)":
     host = st.sidebar.text_input("Host")
@@ -64,7 +93,7 @@ section.main > div {
 </style>
 """, unsafe_allow_html=True)
 
-# 🌙 Apply dark theme if selected
+# 🌙 Dark Theme
 if theme_mode == "Dark":
     st.markdown("""
     <style>
@@ -79,27 +108,23 @@ if theme_mode == "Dark":
     </style>
     """, unsafe_allow_html=True)
 
-# 🔐 OpenAI client
+# 🔐 OpenAI Client
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# 🧠 App Title
+# 🧠 Title
 st.title("🧠 AI SQL Assistant with Full Database Control")
 
 # 📘 Help Guide
 with st.expander("📘 How to use this app"):
     st.markdown("""
-    1. Choose your database connection in the sidebar:
-       - Use **SQLite (local)** to upload and query CSVs
-       - Or connect to **PostgreSQL/MySQL** by entering credentials
-    2. (Optional) Define table relationships (e.g., `orders.customer_id = customers.id`)
-    3. Ask natural-language questions (e.g., "Show all users from Denver")
-    4. Add details below for INSERT/UPDATE/CREATE operations (e.g., `name = 'John'`)
-    5. View generated SQL, confirm and run write queries, or explore result data
-    6. Export data to Excel or CSV and visualize numeric results with charts
-    7. Supported: SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP
+    1. Choose your database connection in the sidebar.
+    2. Upload CSVs (if SQLite) or connect to PostgreSQL/MySQL.
+    3. Define relationships if needed (e.g., `orders.customer_id = customers.id`).
+    4. Ask natural-language questions using column names.
+    5. Confirm and run write queries; view and download results.
     """)
 
-# 📂 Upload CSVs (only if SQLite is selected)
+# 📂 Upload CSVs (if SQLite)
 table_info = {}
 if db_type == "SQLite (local)":
     uploaded_files = st.file_uploader("📂 Upload CSV files", type="csv", accept_multiple_files=True)
@@ -115,7 +140,10 @@ else:
     if conn:
         try:
             cursor = conn.cursor()
-            cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema='public'") if db_type == "PostgreSQL" else cursor.execute("SHOW TABLES")
+            cursor.execute(
+                "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
+                if db_type == "PostgreSQL" else "SHOW TABLES"
+            )
             tables = cursor.fetchall()
             for t in tables:
                 table = t[0] if isinstance(t, tuple) else t
@@ -125,7 +153,7 @@ else:
             st.error(f"Could not load schema: {e}")
 
 # 🔗 Table Relationships
-relationships = st.text_area("🔗 Define table relationships (JOINs, one per line)", placeholder="orders.customer_id = customers.id")
+relationships = st.text_area("🔗 Define table relationships (JOINs)", placeholder="orders.customer_id = customers.id")
 
 # 🧱 Schema Visualizer
 if table_info:
@@ -146,17 +174,17 @@ text_query = st.text_input("💬 Ask your question (use exact column names):")
 user_input_addition = ""
 if text_query:
     user_input_addition = st.text_area(
-        "✍️ Enter additional data/details for INSERT, UPDATE, etc.",
+        "✍️ Additional data/details for INSERT, UPDATE, etc.",
         placeholder="e.g., name = 'John', age = 30"
     )
 
-# 🧠 Schema builder
+# 🧠 Schema Builder
 def build_schema_prompt(info, rels):
     schema = [f"{t}({', '.join(c)})" for t, c in info.items()]
     rel_lines = rels.strip().splitlines() if rels else []
     return "\n".join(["TABLES:"] + schema + ["", "RELATIONSHIPS:"] + rel_lines)
 
-# 🤖 GPT SQL Generator
+# 🤖 SQL Generator
 def generate_sql(question, schema_text):
     prompt = f"""
 You are an assistant that writes SQL queries.
@@ -179,7 +207,7 @@ SQL:
     sql_code = response.choices[0].message.content.strip()
     return sql_code.replace("```sql", "").replace("```", "").strip()
 
-# 🔎 Query execution
+# 🔎 Query Execution
 if text_query and table_info and conn:
     schema = build_schema_prompt(table_info, relationships)
 
@@ -194,9 +222,8 @@ if text_query and table_info and conn:
 
     if is_write:
         st.warning("⚠️ This appears to be a write operation.")
-
         if sql_query.lower().startswith("create") or sql_query.lower().startswith("alter"):
-            st.info("📐 This will create or modify a table. Please review the SQL carefully.")
+            st.info("📐 This will create or modify a table.")
 
         if st.button("✅ Confirm and Execute Write Query"):
             try:
@@ -217,7 +244,7 @@ if text_query and table_info and conn:
                 st.success("✅ Query Result:")
                 st.dataframe(result_df)
 
-                # 📥 CSV and Excel Export
+                # 📥 Export
                 excel_buffer = io.BytesIO()
                 with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
                     result_df.to_excel(writer, index=False, sheet_name="QueryResult")
@@ -225,7 +252,6 @@ if text_query and table_info and conn:
 
                 st.download_button("📤 Download as Excel", excel_buffer.getvalue(), "query_result.xlsx",
                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
                 st.download_button("📄 Download as CSV", csv_data, "query_result.csv", "text/csv")
 
                 # 📊 Chart
