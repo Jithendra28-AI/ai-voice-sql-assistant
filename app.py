@@ -17,31 +17,32 @@ theme_mode = st.sidebar.radio("🎨 Theme", ["Light", "Dark"])
 
 # 🧑 Track User & Send Email
 if "user_logged" not in st.session_state:
-    with st.modal("🧑 Welcome!"):
-        st.markdown("## Please enter your name or email to continue")
-        user_input = st.text_input("Your Name or Email")
-        if st.button("Continue") and user_input:
-            st.session_state.user_id = user_input
-            st.session_state.user_logged = True
-            usage_logs.append({
-                "timestamp": datetime.datetime.now().isoformat(),
-                "user": user_input
-            })
+    st.title("🧑 Welcome!")
+    st.markdown("Please enter your name or email to continue:")
+    user_input = st.text_input("Your Name or Email")
+    
+    if st.button("Continue") and user_input:
+        st.session_state.user_id = user_input
+        st.session_state.user_logged = True
+        usage_logs.append({
+            "timestamp": datetime.datetime.now().isoformat(),
+            "user": user_input
+        })
 
-            def send_email_report(recipient, user_logs):
-                content = "\n".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
-                msg = MIMEText(content)
-                msg["From"] = "anumalajithendra@gmail.com"
-                msg["To"] = recipient
-                msg["Subject"] = "AI SQL App - User Access Log"
+        def send_email_report(recipient, user_logs):
+            content = "\n".join([f"{log['timestamp']} - {log['user']}" for log in user_logs])
+            msg = MIMEText(content)
+            msg["From"] = "anumalajithendra@gmail.com"
+            msg["To"] = recipient
+            msg["Subject"] = "AI SQL App - User Access Log"
 
-                with smtplib.SMTP("smtp.gmail.com", 587) as server:
-                    server.starttls()
-                    server.login("anumalajithendra@gmail.com", st.secrets["EMAIL_APP_PASSWORD"])
-                    server.send_message(msg)
+            with smtplib.SMTP("smtp.gmail.com", 587) as server:
+                server.starttls()
+                server.login("anumalajithendra@gmail.com", st.secrets["EMAIL_APP_PASSWORD"])
+                server.send_message(msg)
 
-            send_email_report("anumalajithendra@gmail.com", usage_logs)
-            st.rerun()
+        send_email_report("anumalajithendra@gmail.com", usage_logs)
+        st.rerun()
     st.stop()
 
 # Show user name in corner
